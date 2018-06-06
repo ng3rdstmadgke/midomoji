@@ -4,7 +4,7 @@ import scala.reflect.ClassTag;
 import scala.collection.AbstractIterator;
 import scala.annotation.tailrec;
 
-class PrefixTree[A](var size: Int)(implicit m: ClassTag[List[A]]) {
+class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(implicit m: ClassTag[List[A]]) {
   private[this] var base: Array[Int]     = new Array[Int](size);
   private[this] var check: Array[Int]    = new Array[Int](size);
   private[this] var data: Array[List[A]] = m.newArray(size);
@@ -50,7 +50,7 @@ class PrefixTree[A](var size: Int)(implicit m: ClassTag[List[A]]) {
       val tmpNextIdx = base(currIdx) + currChar;
       if (tmpNextIdx < size && check(tmpNextIdx) != 0) { // 衝突時
         // 1. currIdx から遷移しているすべてのノード(遷移先ノード)を取得 (index, char)
-        val nextNodes = (0 + currIdx until PrefixTree.CHAR_MAX + currIdx).
+        val nextNodes = (currIdx until PrefixTree.CHAR_MAX + currIdx).
           filter(i => i < size).
           foldLeft(List[(Int, Int)]()) { (xs, i) =>
             if (check(i) == currIdx) (i, i - base(currIdx)) :: xs else xs
@@ -86,8 +86,15 @@ class PrefixTree[A](var size: Int)(implicit m: ClassTag[List[A]]) {
       check(nextIdx) = currIdx;
       currIdx = nextIdx;
     }
-    // TODO:重複dataチェック
-    data(currIdx) = if (data(currIdx) == null) List[A](value) else value :: data(currIdx);
+    // 重複したデータがなければ登録
+    data(currIdx) = if (data(currIdx) == null) {
+      List[A](value);
+    } else {
+      data(currIdx).find(equals(_, value)) match {
+        case None => value :: data(currIdx);
+        case _ => data(currIdx);
+      }
+    }
   }
 
 
@@ -181,6 +188,7 @@ class PrefixTree[A](var size: Int)(implicit m: ClassTag[List[A]]) {
 
 object PrefixTree {
   val CHAR_MAX = 65536;
+  def apply[A](size: Int): PrefixTree[A] = new PrefixTree(size, (e1: A, e2: A) => e1 == e2);
 }
 
 class PrefixSearchIterator[A](key: String, size: Int,  base: Array[Int], check: Array[Int], data: Array[List[A]]) extends AbstractIterator[(String, List[A])] {
