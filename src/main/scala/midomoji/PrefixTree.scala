@@ -2,13 +2,23 @@ package com.github.ng3rdstmadgke.midomoji
 
 import scala.reflect.ClassTag;
 import scala.collection.AbstractIterator;
-import scala.annotation.tailrec;
+import java.io.{OutputStream, InputStream, ObjectOutputStream, ObjectInputStream};
+import java.nio.file.{Paths, Files};
 
-class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(implicit m: ClassTag[List[A]]) {
+@SerialVersionUID(1L)
+class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(implicit m: ClassTag[List[A]]) extends Serializable {
   private[this] var base: Array[Int]     = new Array[Int](size);
   private[this] var check: Array[Int]    = new Array[Int](size);
   private[this] var data: Array[List[A]] = m.newArray(size);
   base(1) = 1;
+
+  def serialize(dictPath: String): Unit = {
+    Using[OutputStream, Unit](Files.newOutputStream(Paths.get(dictPath))) { os =>
+      Using[ObjectOutputStream, Unit](new ObjectOutputStream(os)) { oos =>
+        oos.writeObject(this);
+      }
+    }
+  }
 
   /**
    * key に対応するデータを取得する。
@@ -189,6 +199,13 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
 object PrefixTree {
   val CHAR_MAX = 65536;
   def apply[A](size: Int): PrefixTree[A] = new PrefixTree(size, (e1: A, e2: A) => e1 == e2);
+  def apply[A](dictPath: String): PrefixTree[A] = {
+    Using[InputStream, PrefixTree[A]](Files.newInputStream(Paths.get(dictPath))) { is =>
+      Using[ObjectInputStream,PrefixTree[A]](new ObjectInputStream(is)) { ois =>
+        ois.readObject().asInstanceOf[PrefixTree[A]];
+      }
+    }
+  }
 }
 
 class PrefixSearchIterator[A](key: String, size: Int,  base: Array[Int], check: Array[Int], data: Array[List[A]]) extends AbstractIterator[(String, List[A])] {

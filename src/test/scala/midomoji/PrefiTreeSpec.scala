@@ -1,6 +1,6 @@
 package com.github.ng3rdstmadgke.midomoji
 
-import org.scalatest._
+import org.scalatest.{FlatSpec, DiagrammedAssertions};
 
 class PrefixTreeSpec extends FlatSpec with DiagrammedAssertions {
 
@@ -9,24 +9,24 @@ class PrefixTreeSpec extends FlatSpec with DiagrammedAssertions {
     assert(pt.find("abc") == None);
   }
 
-  "PrefixTree add find" should "未登録の要素の取り出し。配列の長さが足りない場合" in {
+  it should "未登録の要素の取り出し。配列の長さが足りない場合" in {
     val pt = PrefixTree[String](10);
     assert(pt.find("abc") == None);
   }
 
-  "PrefixTree add find" should "未登録の要素の取り出し。途中までのキーが登録されている場合" in {
+  it should "未登録の要素の取り出し。途中までのキーが登録されている場合" in {
     val pt = PrefixTree[String](1000);
     pt.add("ab", "ab");
     assert(pt.find("abc") == None);
   }
 
-  "PrefixTree add find" should "未登録の要素の取り出し。遷移は可能だがdataが登録されていない場合" in {
+  it should "未登録の要素の取り出し。遷移は可能だがdataが登録されていない場合" in {
     val pt = PrefixTree[String](1000);
     pt.add("abcd", "abcd");
     assert(pt.find("abc") == None);
   }
 
-  "PrefixTree add find" should "登録済み要素の取り出し。衝突しない" in {
+  it should "登録済み要素の取り出し。衝突しない" in {
     val pt = PrefixTree[String](10);
     pt.add("abc", "abc");
     pt.add("ad", "ad");
@@ -34,21 +34,21 @@ class PrefixTreeSpec extends FlatSpec with DiagrammedAssertions {
     assert(pt.find("ad") == Some(List("ad")));
   }
 
-  "PrefixTree add find" should "登録済み要素の取り出し。重複した値は登録されない" in {
+  it should "登録済み要素の取り出し。重複した値は登録されない" in {
     val pt = PrefixTree[String](10);
     pt.add("ab", "ab");
     pt.add("ab", "ab");
     assert(pt.find("ab") == Some(List("ab")));
   }
 
-  "PrefixTree add find" should "登録済み要素の取り出し。重複していない値の登録" in {
+  it should "登録済み要素の取り出し。重複していない値の登録" in {
     val pt = PrefixTree[String](10);
     pt.add("ab", "ab1");
     pt.add("ab", "ab2");
     assert(pt.find("ab") == Some(List("ab2", "ab1")));
   }
 
-  "PrefixTree add find" should "登録済み要素の取り出し。衝突する場合" in {
+  it should "登録済み要素の取り出し。衝突する場合" in {
     val pt = PrefixTree[String](10);
     pt.add("abc", "abc");
     pt.add("ad", "ad");
@@ -58,7 +58,7 @@ class PrefixTreeSpec extends FlatSpec with DiagrammedAssertions {
     assert(pt.find("ac") == Some(List("ac")));
   }
 
-  "PrefixTree add find" should "登録済み要素の取り出し。マルチバイト文字" in {
+  it should "登録済み要素の取り出し。マルチバイト文字" in {
     val pt = PrefixTree[String](10);
     pt.add("おはよう", "おはよう");
     pt.add("およごう", "およごう");
@@ -75,5 +75,18 @@ class PrefixTreeSpec extends FlatSpec with DiagrammedAssertions {
     pt.add("a", "a2");
     val ret = pt.prefixSearch("abcd").toList;
     assert(ret == List(("a",List("a2", "a1")), ("abc",List("abc"))));
+  }
+
+  "PrefixTree serialize" should "シリアライズ・デシリアライズ" in {
+    val dictPath = "./prefix_tree.bin";
+    val pt = PrefixTree[String](10);
+    pt.add("abc", "abc");
+    pt.add("ad", "ad");
+    pt.add("ac", "ac");
+    pt.serialize(dictPath);
+    val pt2 = PrefixTree[String](dictPath);
+    assert(pt2.find("abc") == Some(List("abc")));
+    assert(pt2.find("ad") == Some(List("ad")));
+    assert(pt2.find("ac") == Some(List("ac")));
   }
 }
