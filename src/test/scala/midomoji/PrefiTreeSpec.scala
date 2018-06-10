@@ -1,6 +1,7 @@
-package com.github.ng3rdstmadgke.midomoji
+package com.github.ng3rdstmadgke.midomoji;
 
 import org.scalatest.{FlatSpec, DiagrammedAssertions};
+import java.nio.file.{Paths, Files};
 
 class PrefixTreeSpec extends FlatSpec with DiagrammedAssertions {
 
@@ -78,15 +79,17 @@ class PrefixTreeSpec extends FlatSpec with DiagrammedAssertions {
   }
 
   "PrefixTree serialize" should "シリアライズ・デシリアライズ" in {
-    val dictPath = "./prefix_tree.bin";
     val pt = PrefixTree[String](10);
     pt.add("abc", "abc");
     pt.add("ad", "ad");
     pt.add("ac", "ac");
+    val dictPath = "dictionary/test_prefixtree.bin";
     pt.serialize(dictPath);
     val pt2 = PrefixTree[String](dictPath);
     assert(pt2.find("abc") == Some(List("abc")));
     assert(pt2.find("ad") == Some(List("ad")));
     assert(pt2.find("ac") == Some(List("ac")));
+    Files.deleteIfExists(Paths.get(dictPath));
+
   }
 }
