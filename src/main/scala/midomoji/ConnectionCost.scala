@@ -6,6 +6,7 @@ import java.nio.file.{Paths, Files};
 /**
  * 連接コスト表
  */
+@SerialVersionUID(1L)
 class ConnectionCost(val leftSize: Int, val rightSize: Int) extends Serializable {
   private[this] val matrix = Array.ofDim[Int](leftSize, rightSize);
   private[this] val maxCost = 100000;
