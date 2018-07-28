@@ -78,6 +78,7 @@ class PrefixTreeSpec extends FlatSpec with DiagrammedAssertions {
     assert(ret == List(("a",List("a2", "a1")), ("abc",List("abc"))));
   }
 
+/*
   "PrefixTree serialize" should "シリアライズ・デシリアライズ" in {
     val pt = PrefixTree[String](10);
     pt.add("abc", "abc");
@@ -90,6 +91,6 @@ class PrefixTreeSpec extends FlatSpec with DiagrammedAssertions {
     assert(pt2.find("ad") == Some(List("ad")));
     assert(pt2.find("ac") == Some(List("ac")));
     Files.deleteIfExists(Paths.get(dictPath));
-
   }
+*/
 }
