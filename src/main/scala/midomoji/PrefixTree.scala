@@ -46,11 +46,12 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
     var (currIdx, keyIdx) = findFaildPoint(key);
     for (i <- (keyIdx until key.length)) {
       val currChar = key(i).toInt;
-      val tmpNextIdx = base(currIdx) + currChar;
+      val currBase = base(currIdx);
+      val tmpNextIdx = currBase + currChar;
       if (tmpNextIdx < size && check(tmpNextIdx) != 0) { // 衝突時
         // 1. currIdx から遷移しているすべてのノード(遷移先ノード)を取得 (index, char)
-        val nextNodes = (currIdx until PrefixTree.CHAR_MAX + currIdx).
-          filter(i => i < size).
+        val nextNodes = (currBase until PrefixTree.CHAR_MAX + currBase).
+          filter(_ < size).
           foldLeft(List[(Int, Int)]()) { (xs, i) =>
             if (check(i) == currIdx) (i, i - base(currIdx)) :: xs else xs
           }
