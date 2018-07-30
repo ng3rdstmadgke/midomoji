@@ -3,6 +3,7 @@ package com.github.ng3rdstmadgke.midomoji
 import java.io.Closeable;
 import scala.util.Try;
 import scala.io.Source;
+import java.text.Normalizer;
 
 /**
  * 使い終わったリソースを自動でcloseする
@@ -85,12 +86,13 @@ object Util {
   def parsePT(input: String): Option[Morpheme] = {
     val list    = input.split(",");
     if (list.length == 13) {
+      val surface = Normalizer.normalize(list(0), Normalizer.Form.NFKC);
       val leftId  = Util.toIntOption(list(1));
       val rightId = Util.toIntOption(list(2));
       val cost    = Util.toIntOption(list(3));
       if (leftId != None && rightId != None && cost != None) {
         // 表層形,左文脈ID,右文脈ID,コスト,品詞,品詞細分類1,品詞細分類2,品詞細分類3,活用型,活用形,原形,読み,発音
-        val morpheme = Morpheme(list(0), leftId.get, rightId.get, cost.get, list(4), list(10), list(11));
+        val morpheme = Morpheme(surface, leftId.get, rightId.get, cost.get, list(4), list(10), list(11));
         return Some(morpheme);
       }
     }
