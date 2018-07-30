@@ -1,9 +1,9 @@
-package com.github.ng3rdstmadgke.midomoji
+package com.github.ng3rdstmadgke.midomoji;
 
 import scala.io.Source;
 import scala.io.StdIn.readLine;
 import scala.collection.mutable.{ListBuffer, HashMap};
-import java.nio.file.{Paths, Files};
+import java.text.Normalizer;
 
 object Main {
 
@@ -14,19 +14,19 @@ object Main {
       case ("-b" | "--build") :: mtPath :: ptPath :: dictPath :: xs => {
         val matrix = Util.createMT(mtPath);
         val prefixtree = Util.createPT(ptPath);
-        DictionarySet(prefixtree, matrix).serialize(dictPath);
+        DictionarySet[Morpheme](prefixtree, matrix).serialize(dictPath);
       }
 
       // -cm ./dictionary/dictionary_set.bin ./dictionary/matrix.def
       case ("-cm" | "--check-matrix") :: dictPath :: mtPath :: xs => {
-        val dictSet = DictionarySet(dictPath);
+        val dictSet = DictionarySet[Morpheme](dictPath);
         val mt = dictSet.matrix;
         Util.checkMT(mt, mtPath);
       }
 
       // -cp ./dictionary/dictionary_set.bin ./dictionary/morpheme.csv
       case ("-cp" | "--check-prefixtree") :: dictPath :: ptPath :: xs => {
-        val dictSet = DictionarySet(dictPath);
+        val dictSet = DictionarySet[Morpheme](dictPath);
         val pt = dictSet.prefixtree;
         Util.checkPT(pt, ptPath);
       }
@@ -55,7 +55,7 @@ object Main {
       readLine.split(" ").toList match {
         case "exit" :: xs => return ();
         case "deserialize" :: dict :: xs => {
-          val dictSet = DictionarySet(dict);
+          val dictSet = DictionarySet[Morpheme](dict);
           prefixtree = dictSet.prefixtree;
           matrix = dictSet.matrix;
         }
@@ -81,7 +81,12 @@ object Main {
           }
         }
         case "search" :: surface :: xs => {
-          prefixtree.prefixSearch(surface).foreach(println(_));
+          val len = surface.length;
+          (0 until len).foreach { i =>
+            val sub = surface.slice(i, len);
+            val ms = prefixtree.prefixSearch(sub).flatMap(e => e._2).mkString(", ");
+            println("%d : %s".format(i + 1, ms));
+          }
         }
         case "add" :: surface :: xs => {
           val m = Morpheme(surface, 1, 1, 0, "", "", "");
