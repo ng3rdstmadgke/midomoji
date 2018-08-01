@@ -79,7 +79,7 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
       // currChar のノードを追加
       val nextIdx = base(currIdx) + currChar;
       // nextIdx が配列のサイズ以上になってしまった場合は配列を拡張
-      if (size < nextIdx) {
+      if (nextIdx >= size) {
         extendsArray(nextIdx);
       }
       base(nextIdx)  = 1;
@@ -110,10 +110,12 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
         case Nil => b;
         case (_, char) :: rest => {
           val newIdx = b + char;
-          if (check(newIdx) == 0) {
-            go(b, rest);
-          } else if (newIdx < size) {
-            go(b + 1, nextNodes);
+          if (newIdx < size) {
+            if (check(newIdx) == 0) {
+              go(b, rest);
+            } else {
+              go(b + 1, nextNodes);
+            }
           } else {
             // newIdx が配列のサイズ以上になってしまった場合は配列を拡張
             extendsArray(newIdx);

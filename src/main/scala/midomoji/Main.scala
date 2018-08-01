@@ -13,7 +13,7 @@ object Main {
       // --build ./dictionary/matrix.def ./dictionary/morpheme.csv ./dictionary/dictionary_set.bin
       case ("--build") :: mtPath :: ptPath :: dictPath :: xs => {
         val matrix = Util.createMT(mtPath);
-        val prefixtree = Util.createPTSimple(ptPath);
+        val prefixtree = Util.createPT(ptPath);
         DictionarySet[Array[Int]](prefixtree, matrix).serialize(dictPath);
       }
 
@@ -28,7 +28,7 @@ object Main {
       case ("--check-prefixtree") :: dictPath :: ptPath :: xs => {
         val dictSet = DictionarySet[Array[Int]](dictPath);
         val pt = dictSet.prefixtree;
-        Util.checkPTSimple(pt, ptPath);
+        Util.checkPT(pt, ptPath);
       }
 
       case ("-d" | "--debug") :: xs => {
@@ -60,10 +60,10 @@ object Main {
           matrix = dictSet.matrix;
         }
         case "create" :: dict :: xs =>{
-          prefixtree = Util.createPTSimple(dict);
+          prefixtree = Util.createPT(dict);
         }
         case "check" :: ptPath :: xs =>{
-          Util.checkPTSimple(prefixtree, ptPath);
+          Util.checkPT(prefixtree, ptPath);
         }
         case "cost" :: l :: r :: xs => {
           val left  = Util.toIntOption(l);
@@ -107,7 +107,7 @@ object Main {
           prefixtree.add(surface, Array(1,1,1));
         }
         case "init" :: xs => {
-          prefixtree = PrefixTree[Array[Int]](500000);
+          prefixtree = PrefixTree[Array[Int]](5);
           matrix = Matrix(1316, 1316);
         }
         case "dump" :: xs => {

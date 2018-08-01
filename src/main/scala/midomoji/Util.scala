@@ -82,10 +82,10 @@ object Util {
     if (Using[Source, Boolean](Source.fromFile(mtPath))(checkMatrix)) println("OK!!") else println("NG...");
   }
 
-  def parsePTSimple(input: String): Option[(String, Array[Int])] = {
+  def parsePT(input: String): Option[(String, Array[Int])] = {
     val list    = input.split(",");
     if (list.length == 13) {
-      val surface = Normalizer.normalize(list(0), Normalizer.Form.NFKC);
+      val surface = list(0);
       val leftId  = Util.toIntOption(list(1));
       val rightId = Util.toIntOption(list(2));
       val cost    = Util.toIntOption(list(3));
@@ -96,11 +96,11 @@ object Util {
     return None;
   }
 
-  def createPTSimple(path: String): PrefixTree[Array[Int]] = {
+  def createPT(path: String): PrefixTree[Array[Int]] = {
     Using[Source, PrefixTree[Array[Int]]](Source.fromFile(path)) { s =>
       val pt = PrefixTree[Array[Int]](500000);
       s.getLines.foreach { line =>
-        Util.parsePTSimple(line) match {
+        Util.parsePT(line) match {
           case None                  => ();
           case Some((surface, data)) => pt.add(surface, data);
         }
@@ -109,22 +109,30 @@ object Util {
     }
   }
 
-  def checkPTSimple(prefixree: PrefixTree[Array[Int]], ptPath: String): Unit = {
+  def checkPT(prefixree: PrefixTree[Array[Int]], ptPath: String): Unit = {
     val checkPT: Source => Boolean = s => {
       // 表層形,左文脈ID,右文脈ID,コスト,品詞,品詞細分類1,品詞細分類2,品詞細分類3,活用型,活用形,原形,読み,発音
       var cnt = 0;
       var ret = s.getLines.foldLeft(true) { (ret, line) =>
-        Util.parsePTSimple(line) match {
+        Util.parsePT(line) match {
           case None                  => ret;
           case Some((surface, data)) => {
+            var output = "";
             val exists = prefixree.find(surface) match {
-              case None     => false;
-              case Some(ds) => ds.exists(d => data(0) == d(0) && data(1) == d(1) && data(2) == d(2));
+              case None     => {
+                output = "None";
+                false;
+              }
+              case Some(ds) => {
+                output = ds.map("(" + _.mkString(",") + ")").mkString(", ");
+                ds.exists(d => data(0) == d(0) && data(1) == d(1) && data(2) == d(2));
+              }
             }
             if (exists) {
               ret;
             } else {
-              println("surface=%s, data=%s".format(surface, data.mkString(", ")));
+              println("input : %s, %s".format(surface, data.mkString(", ")));
+              println("output : " + output);
               cnt += 1;
               false;
             }
