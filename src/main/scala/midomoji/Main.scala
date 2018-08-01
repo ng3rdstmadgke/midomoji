@@ -31,7 +31,7 @@ object Main {
         Util.checkPTSimple(pt, ptPath);
       }
 
-      case ("-d" | "--debug") :: mode :: xs => {
+      case ("-d" | "--debug") :: xs => {
         debug();
       }
       case ("-a" | "--analysis") :: xs  => {
@@ -89,6 +89,17 @@ object Main {
               val surface = e._1;
               val data = e._2.map(d => "(" + d.mkString(", ") + ")").mkString(", ");
               println("  %s : %s".format(surface, data));
+            }
+          }
+        }
+        case "analize" :: text :: xs => {
+          val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
+          val viterbi = Viterbi(prefixtree, matrix);
+          viterbi.analize(normalized) match {
+            case None => println("ノードが途中で途切れました");
+            case Some((list, cost)) => {
+              println("cost : " + cost);
+              println(list.tail.reverse.mkString("\n"));
             }
           }
         }
