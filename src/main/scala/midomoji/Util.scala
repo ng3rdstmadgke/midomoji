@@ -98,7 +98,7 @@ object Util {
 
   def createPT(path: String): PrefixTree[Array[Int]] = {
     Using[Source, PrefixTree[Array[Int]]](Source.fromFile(path)) { s =>
-      val pt = PrefixTree[Array[Int]](500000);
+      val pt = PrefixTree[Array[Int]](700000);
       s.getLines.foreach { line =>
         Util.parsePT(line) match {
           case None                  => ();

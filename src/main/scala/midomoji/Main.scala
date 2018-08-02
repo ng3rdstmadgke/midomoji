@@ -18,7 +18,7 @@ object Main {
       }
 
       // --check-matrix ./dictionary/dictionary_set.bin ./dictionary/matrix.def
-      case ("-cm" | "--check-matrix") :: dictPath :: mtPath :: xs => {
+      case ("--check-matrix") :: dictPath :: mtPath :: xs => {
         val dictSet = DictionarySet[Array[Int]](dictPath);
         val mt = dictSet.matrix;
         Util.checkMT(mt, mtPath);

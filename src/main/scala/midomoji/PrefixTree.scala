@@ -62,14 +62,16 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
         nextNodes.foreach { e =>
           val srcIdx  = e._1;
           val srcChar = e._2;
-          val dstIdx  = base(currIdx) + srcChar;
           val srcBase = base(srcIdx);
+          val dstIdx  = base(currIdx) + srcChar; // 遷移先ノードの新しいインデックス
           // 3. 遷移先ノードを新しい base で計算した index にコピー
           base(dstIdx)  = base(srcIdx);
           check(dstIdx) = check(srcIdx);
           data(dstIdx)  = data(srcIdx);
           // 4. 旧遷移先ノードから更に遷移しているノードの check を新遷移先ノードの index で更新
-          (srcBase until srcBase + PrefixTree.CHAR_MAX).filter(i => i < size).foreach { i => if (check(i) == srcIdx) check(i) = dstIdx; }
+          (srcBase until srcBase + PrefixTree.CHAR_MAX).
+            filter(_ < size).
+            foreach { i => if (check(i) == srcIdx) check(i) = dstIdx; }
           // 5. 旧遷移先ノードの base, check, data をリセット
           base(srcIdx)  = 1;
           check(srcIdx) = 0;
@@ -119,7 +121,7 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
           } else {
             // newIdx が配列のサイズ以上になってしまった場合は配列を拡張
             extendsArray(newIdx);
-            go(b, ns);
+            go(b, rest);
           }
         }
       }
