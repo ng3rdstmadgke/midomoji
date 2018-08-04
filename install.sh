@@ -12,6 +12,6 @@ EOF
 
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 echo  "build source ..."
-sbt clean assembly
+sbt clean assembly || exit 1
 $SCRIPT_DIR/midomoji -m build || exit 1
 $SCRIPT_DIR/midomoji -m check || exit 1
