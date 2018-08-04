@@ -10,23 +10,24 @@ object Main {
   
   def main(args: Array[String]): Unit = {
     args.toList match {
-      // --build ./dictionary/matrix.def ./dictionary/morpheme.csv ./dictionary/dictionary_set.bin
-      case ("--build") :: mtPath :: ptPath :: dictPath :: xs => {
+      // --build ./dictionary/matrix.def ./dictionary/pos-id.def ./dictionary/morpheme.csv ./dictionary/dictionary_set.bin
+      case ("--build") :: mtPath :: posPath :: ptPath :: dictPath :: xs => {
         val matrix = Util.createMT(mtPath);
-        val prefixtree = Util.createPT(ptPath);
-        DictionarySet[Array[Int]](prefixtree, matrix).serialize(dictPath);
+        val (posMap, posArr) = Util.createPosMap(posPath);
+        val prefixtree = Util.createPT(ptPath, posMap);
+        DictionarySet[Array[Array[Int]]](prefixtree, matrix, posArr).serialize(dictPath);
       }
 
       // --check-matrix ./dictionary/dictionary_set.bin ./dictionary/matrix.def
       case ("--check-matrix") :: dictPath :: mtPath :: xs => {
-        val dictSet = DictionarySet[Array[Int]](dictPath);
+        val dictSet = DictionarySet[Array[Array[Int]]](dictPath);
         val mt = dictSet.matrix;
         Util.checkMT(mt, mtPath);
       }
 
       // --check-prefixtree ./dictionary/dictionary_set.bin ./dictionary/morpheme.csv
       case ("--check-prefixtree") :: dictPath :: ptPath :: xs => {
-        val dictSet = DictionarySet[Array[Int]](dictPath);
+        val dictSet = DictionarySet[Array[Array[Int]]](dictPath);
         val pt = dictSet.prefixtree;
         Util.checkPT(pt, ptPath);
       }
@@ -48,36 +49,34 @@ object Main {
   }
 
   def debug(): Unit = {
-    var prefixtree: PrefixTree[Array[Int]] = PrefixTree[Array[Int]](500000);
-    var matrix: Matrix = Matrix(1316, 1316);
+    var prefixtree = PrefixTree[Array[Array[Int]]](500000);
+    var matrix     = Matrix(1316, 1316);
+    var posArr     = Array[Array[String]]();
     def go(): Unit = {
       print("command : ");
       readLine.split(" ").toList match {
-        case "exit" :: xs => return ();
+        case "init" :: xs => {
+          prefixtree = PrefixTree[Array[Array[Int]]](5);
+          matrix     = Matrix(1316, 1316);
+          posArr     = Array[Array[String]]();
+        }
         case "deserialize" :: dict :: xs => {
-          val dictSet = DictionarySet[Array[Int]](dict);
+          val dictSet = DictionarySet[Array[Array[Int]]](dict);
           prefixtree = dictSet.prefixtree;
-          matrix = dictSet.matrix;
-        }
-        case "create" :: dict :: xs =>{
-          prefixtree = Util.createPT(dict);
-        }
-        case "check" :: ptPath :: xs =>{
-          Util.checkPT(prefixtree, ptPath);
+          matrix     = dictSet.matrix;
+          posArr     = dictSet.posArr;
         }
         case "cost" :: l :: r :: xs => {
-          val left  = Util.toIntOption(l);
-          val right = Util.toIntOption(r);
-          if (matrix != null && left != None && right != None) {
-            println(matrix.getCost(left.get, right.get));
-          } else {
-            println("matrix is null or invalid args");
+          try {
+            println(matrix.getCost(l.toInt, r.toInt));
+          } catch {
+            case _ : Throwable => println("invalid args");;
           }
         }
         case "find" :: surface :: xs => {
           prefixtree.find(surface) match {
             case None    => println("not found");
-            case Some(m) => println(m.map(e => "(" + e.mkString(", ") + ")"));
+            case Some(m) => println(m);
           }
         }
         case "search" :: surface :: xs => {
@@ -92,7 +91,7 @@ object Main {
             }
           }
         }
-        case "analize" :: text :: xs => {
+        case "analyze" :: text :: xs => {
           val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
           val viterbi = Viterbi(prefixtree, matrix);
           viterbi.analize(normalized) match {
@@ -104,11 +103,18 @@ object Main {
           }
         }
         case "add" :: surface :: xs => {
-          prefixtree.add(surface, Array(1,1,1));
-        }
-        case "init" :: xs => {
-          prefixtree = PrefixTree[Array[Int]](5);
-          matrix = Matrix(1316, 1316);
+          prefixtree.add(surface, Array(1,1,1,1)) { (existing, newData) =>
+            existing match {
+              case arr: Array[Array[Int]] => {
+                val len = arr.length;
+                val newArr = new Array[Array[Int]](len + 1);
+                (0 until len).foreach(i => newArr(i) = arr(i));
+                newArr(len) = newData;
+                newArr;
+              }
+              case _ => Array[Array[Int]](newData);
+            }
+          };
         }
         case "dump" :: xs => {
           prefixtree.dump;
@@ -123,15 +129,15 @@ object Main {
             println("dict is null");
           }
         }
+        case "exit" :: xs => return ();
         case _ => {
           val help = ListBuffer[String]();
           help += "exit                : デバッグモードを終了する";
           help += "deserialize [DICT]  : 構築済み辞書を読み込む";
-          help += "create [DICT]       : ";
-          help += "check [DICT] [PT]   : ";
           help += "cost [LEFT] [RIGHT] : ";
           help += "find [SURFACE]      : ";
           help += "search [TEXT]       : ";
+          help += "analyze [TEXT]       : ";
           help += "add [SURFACE]       : ";
           help += "init                : ";
           help += "dump                : ";

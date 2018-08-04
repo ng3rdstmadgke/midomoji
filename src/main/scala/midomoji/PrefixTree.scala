@@ -3,11 +3,35 @@ package com.github.ng3rdstmadgke.midomoji
 import scala.reflect.ClassTag;
 import scala.collection.AbstractIterator;
 
-class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(implicit m: ClassTag[List[A]]) extends Serializable {
-  private[this] var base: Array[Int]     = new Array[Int](size);
-  private[this] var check: Array[Int]    = new Array[Int](size);
-  private[this] var data: Array[List[A]] = m.newArray(size);
-  base(1) = 1;
+object PrefixTree {
+  val CHAR_MAX = 65536;
+  def apply[A](size: Int)(implicit m: ClassTag[A]): PrefixTree[A] = {
+    val base: Array[Int]  = new Array[Int](size);
+    val check: Array[Int] = new Array[Int](size);
+    val data: Array[A]    = m.newArray(size);
+    base(1) = 1;
+    new PrefixTree[A](size, base, check, data);
+  }
+  def apply[A](size: Int, base: Array[Int], check: Array[Int], data: Array[A])(implicit m: ClassTag[A]): PrefixTree[A] = {
+    new PrefixTree[A](size, base, check, data);
+  }
+}
+
+class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Array[Int], var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
+  private var none: A = _; // A型のnull値
+
+  /**
+   * data を C 型に変更して新しいPrefixTreeオブジェクトを作る
+   *
+   * @param convert data を C 型に変更するための関数
+   * @return key に対応するデータ
+   */
+  def convertDataType[C](convert: A => C)(implicit c: ClassTag[C]): PrefixTree[C] = {
+    val currData = data;
+    val newData = c.newArray(size);
+    (0 until size).foreach ( i => newData(i) = convert(currData(i)));
+    PrefixTree[C](size, base, check, newData);
+  }
 
   /**
    * key に対応するデータを取得する。
@@ -15,7 +39,7 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
    * @param key 取得するデータのキー
    * @return key に対応するデータ
    */
-  def find(key: String): Option[List[A]] = {
+  def find(key: String): Option[A] = {
     var currIdx = 1;
     for (char <- key) {
       val nextIdx = base(currIdx) + char.toInt;
@@ -42,7 +66,9 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
    * @param key 登録対象のデータのキー
    * @param value 登録対象のデータ
    */
-  def add(key: String, value: A): Unit = {
+  def add[B](key: String, value: B)(func: (A, B) => A): Unit = {
+    // よく使うフィールドをスタック変数として定義
+    val stackNone = none;
     var (currIdx, keyIdx) = findFaildPoint(key);
     for (i <- (keyIdx until key.length)) {
       val currChar = key(i).toInt;
@@ -53,7 +79,7 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
         val nextNodes = (currBase until PrefixTree.CHAR_MAX + currBase).
           filter(_ < size).
           foldLeft(List[(Int, Int)]()) { (xs, i) =>
-            if (check(i) == currIdx) (i, i - base(currIdx)) :: xs else xs
+            if (check(i) == currIdx) (i, i - currBase) :: xs else xs
           }
 
         // 2. 遷移先ノードと currChar が遷移可能なbaseを求める
@@ -75,7 +101,7 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
           // 5. 旧遷移先ノードの base, check, data をリセット
           base(srcIdx)  = 1;
           check(srcIdx) = 0;
-          data(srcIdx)  = null;
+          data(srcIdx)  = stackNone;
         }
       }
       // currChar のノードを追加
@@ -88,15 +114,8 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
       check(nextIdx) = currIdx;
       currIdx = nextIdx;
     }
-    // 重複したデータがなければ登録
-    data(currIdx) = if (data(currIdx) == null) {
-      List[A](value);
-    } else {
-      data(currIdx).find(equals(_, value)) match {
-        case None => value :: data(currIdx);
-        case _ => data(currIdx);
-      }
-    }
+    // データを登録
+    data(currIdx) = func(data(currIdx), value);
   }
 
 
@@ -190,17 +209,12 @@ class PrefixTree[A] private (var size: Int, val equals: (A, A) => Boolean)(impli
   }
 }
 
-object PrefixTree {
-  val CHAR_MAX = 65536;
-  def apply[A](size: Int): PrefixTree[A] = new PrefixTree(size, (e1: A, e2: A) => e1 == e2);
-}
-
-class PrefixSearchIterator[A](key: String, size: Int,  base: Array[Int], check: Array[Int], data: Array[List[A]]) extends AbstractIterator[(String, List[A])] {
+class PrefixSearchIterator[A](key: String, size: Int,  base: Array[Int], check: Array[Int], data: Array[A]) extends AbstractIterator[(String, A)] {
   var currIdx = 1;
   var keyIdx = 0;
   val keyLen = key.length;
 
-  override def next(): (String, List[A]) = (key.substring(0, keyIdx), data(currIdx));
+  override def next(): (String, A) = (key.substring(0, keyIdx), data(currIdx));
 
   override def hasNext: Boolean = {
     while (keyIdx < keyLen) {

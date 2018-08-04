@@ -4,7 +4,7 @@ import scala.collection.mutable.HashMap;
 
 case class LatticeNode(val surface: String, val leftId: Int, val rightId: Int, val cost: Int, val prevIdx: Int);
 
-class Viterbi private (private val prefixtree: PrefixTree[Array[Int]], private val matrix: Matrix) {
+class Viterbi private (private val prefixtree: PrefixTree[Array[Array[Int]]], private val matrix: Matrix) {
 
   def analize(text: String): Option[(List[LatticeNode], Int)] = {
     val lattice = createLattice(text);
@@ -65,10 +65,10 @@ class Viterbi private (private val prefixtree: PrefixTree[Array[Int]], private v
 }
 
 object Viterbi {
-  def apply(ds: DictionarySet[Array[Int]]): Viterbi = {
+  def apply(ds: DictionarySet[Array[Array[Int]]]): Viterbi = {
     new Viterbi(ds.prefixtree, ds.matrix);
   }
-  def apply(prefixtree: PrefixTree[Array[Int]], matrix: Matrix): Viterbi = {
+  def apply(prefixtree: PrefixTree[Array[Array[Int]]], matrix: Matrix): Viterbi = {
     new Viterbi(prefixtree, matrix);
   }
 }
