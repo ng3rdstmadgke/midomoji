@@ -153,10 +153,10 @@ object Util {
         Util.parsePT(line, posMap) match {
           case None                  => ();
           case Some((surface, data)) => {
-            pt.add[Array[Int]](surface, data) { (existing, newData) =>
+            pt.add[Array[Int]](surface, data) { (existing, elem) =>
               existing match {
-                case ls: List[Array[Int]] => newData :: ls;
-                case _                    => List[Array[Int]](newData);
+                case ls: List[Array[Int]] => elem :: ls;
+                case _                    => List[Array[Int]](elem);
               }
             };
           }

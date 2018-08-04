@@ -49,7 +49,7 @@ object Main {
   }
 
   def debug(): Unit = {
-    var prefixtree = PrefixTree[Array[Array[Int]]](500000);
+    var prefixtree = PrefixTree[Array[Array[Int]]](5);
     var matrix     = Matrix(1316, 1316);
     var posArr     = Array[Array[String]]();
     def go(): Unit = {
@@ -65,6 +65,13 @@ object Main {
           prefixtree = dictSet.prefixtree;
           matrix     = dictSet.matrix;
           posArr     = dictSet.posArr;
+        }
+        case "pos" :: xs => {
+          posArr.zipWithIndex.foreach { e =>
+            val idx = e._2;
+            val pos = e._1.mkString(", ");
+            println(idx + " : " + pos);
+          }
         }
         case "cost" :: l :: r :: xs => {
           try {
@@ -103,16 +110,16 @@ object Main {
           }
         }
         case "add" :: surface :: xs => {
-          prefixtree.add(surface, Array(1,1,1,1)) { (existing, newData) =>
+          prefixtree.add(surface, Array(1,1,1,1)) { (existing, elem) =>
             existing match {
               case arr: Array[Array[Int]] => {
                 val len = arr.length;
                 val newArr = new Array[Array[Int]](len + 1);
                 (0 until len).foreach(i => newArr(i) = arr(i));
-                newArr(len) = newData;
+                newArr(len) = elem;
                 newArr;
               }
-              case _ => Array[Array[Int]](newData);
+              case _ => Array[Array[Int]](elem);
             }
           };
         }
@@ -132,16 +139,17 @@ object Main {
         case "exit" :: xs => return ();
         case _ => {
           val help = ListBuffer[String]();
-          help += "exit                : デバッグモードを終了する";
           help += "deserialize [DICT]  : 構築済み辞書を読み込む";
-          help += "cost [LEFT] [RIGHT] : ";
-          help += "find [SURFACE]      : ";
-          help += "search [TEXT]       : ";
-          help += "analyze [TEXT]       : ";
-          help += "add [SURFACE]       : ";
-          help += "init                : ";
-          help += "dump                : ";
-          help += "status              : ";
+          help += "pos                 : 品詞リストをすべて表示する";
+          help += "cost [LEFT] [RIGHT] : 連接コストを表示する";
+          help += "find [SURFACE]      : トライ木に対してSURFACEをキーとする値を取り出す";
+          help += "search [TEXT]       : トライ木に対して共通接頭辞検索を行う";
+          help += "analyze [TEXT]      : 形態素解析を行う";
+          help += "add [SURFACE]       : トライ木に要素を追加する";
+          help += "init                : 辞書をリセットする";
+          help += "dump                : トライ木をダンプする";
+          help += "status              : 辞書のステータスを表示する";
+          help += "exit                : デバッグモードを終了する";
           println(help.mkString("\n"));
         }
       }
