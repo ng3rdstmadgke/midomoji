@@ -46,18 +46,27 @@ class Viterbi private (private val prefixtree: PrefixTree[Array[Array[Int]]], pr
 
   def createLattice(text: String): Array[List[LatticeNode]] = {
     val len = text.length;
-    val lattice   = Array.fill[List[LatticeNode]](len + 2)(Nil);
+    // Indexは1スタート
+    // 辞書からラティス構造を構築
+    val lattice = Array.fill[List[LatticeNode]](len + 2)(Nil);
     (0 until len).foreach { i =>
       val subText  = text.slice(i, len);
       val prevIdx  = i;
       prefixtree.prefixSearch(subText).foreach { elem =>
         val surface = elem._1;
-        val currIdx  = i + surface.length;
-        elem._2.map{ data =>
-          LatticeNode(surface, data(0), data(1), data(2), prevIdx);
-        }.foreach {
-          node => lattice(currIdx) = node :: lattice(currIdx);
+        val tokens  = elem._2;
+        val endIdx  = i + surface.length;
+        tokens.foreach { token =>
+          lattice(endIdx) = LatticeNode(surface, token(0), token(1), token(2), prevIdx) :: lattice(endIdx);
         }
+      }
+    }
+    // ラティス構造に未知語ノードを追加
+    val tokenizer = Tokenizer(prefixtree);
+    tokenizer.tokenize(text).foreach { node =>
+      val (startIdx, endIdx, surface, tokens) = node;
+      tokens.foreach { token =>
+        lattice(endIdx) = LatticeNode(surface, token(0), token(1), token(2), startIdx - 1) :: lattice(endIdx);
       }
     }
     lattice;
