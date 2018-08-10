@@ -12,7 +12,17 @@ object Main {
       case ("--build") :: mtPath :: posPath :: ptPath :: dictPath :: xs => {
         val matrix = Matrix.build(mtPath);
         val (posMap, posArr) = Util.createPosMap(posPath);
-        val prefixtree = Util.createPT(ptPath, posMap);
+        val parse = (arr: Array[String]) => {
+          val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
+          Array(left, right, cost, pos, k1, k2).map(_.toInt);
+        }
+        val add = (existing: List[Array[Int]], elem: Array[Int]) => {
+          existing match {
+            case ls: List[Array[Int]] => elem :: ls;
+            case _                    => List[Array[Int]](elem);
+          }
+        }
+        val prefixtree = PrefixTree.build[Array[Int]](ptPath)(parse)(add);
         DictionarySet[Array[Array[Int]]](prefixtree, matrix, posArr).serialize(dictPath);
       }
 
@@ -34,7 +44,12 @@ object Main {
       case ("--check-prefixtree") :: dictPath :: ptPath :: xs => {
         val dictSet = DictionarySet[Array[Array[Int]]](dictPath);
         val pt = dictSet.prefixtree;
-        Util.checkPT(pt, ptPath);
+        val parse = (arr: Array[String]) => {
+          val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
+          Array(left, right, cost, pos, k1, k2).map(_.toInt);
+        }
+        val exists = (elem: Array[Int], es: Array[Array[Int]]) => es.exists(e => elem.sameElements(e));
+        PrefixTree.check[Array[Int]](pt, ptPath)(parse)(exists);
       }
 
       case ("-d" | "--debug") :: xs => {

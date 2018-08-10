@@ -2,20 +2,7 @@ package com.github.ng3rdstmadgke.midomoji
 
 import scala.reflect.ClassTag;
 import scala.collection.AbstractIterator;
-
-object PrefixTree {
-  val CHAR_MAX = 65536;
-  def apply[A](size: Int)(implicit m: ClassTag[A]): PrefixTree[A] = {
-    val base: Array[Int]  = new Array[Int](size);
-    val check: Array[Int] = new Array[Int](size);
-    val data: Array[A]    = m.newArray(size);
-    base(1) = 1;
-    new PrefixTree[A](size, base, check, data);
-  }
-  def apply[A](size: Int, base: Array[Int], check: Array[Int], data: Array[A])(implicit m: ClassTag[A]): PrefixTree[A] = {
-    new PrefixTree[A](size, base, check, data);
-  }
-}
+import scala.io.Source;
 
 class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Array[Int], var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
   private var none: A = _; // A型のnull値
@@ -221,6 +208,58 @@ class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Arr
         println("|" + i.toString.padTo(10, ' ') + "|" + base(i).toString.padTo(10, ' ') + "|" + check(i).toString.padTo(10, ' ') + "|" + char + "(" + cp + "), " + d);
         println(sepLine);
       }
+  }
+}
+
+object PrefixTree {
+  val CHAR_MAX = 65536;
+  def apply[A](size: Int)(implicit m: ClassTag[A]): PrefixTree[A] = {
+    val base: Array[Int]  = new Array[Int](size);
+    val check: Array[Int] = new Array[Int](size);
+    val data: Array[A]    = m.newArray(size);
+    base(1) = 1;
+    new PrefixTree[A](size, base, check, data);
+  }
+
+  def apply[A](size: Int, base: Array[Int], check: Array[Int], data: Array[A])(implicit m: ClassTag[A]): PrefixTree[A] = {
+    new PrefixTree[A](size, base, check, data);
+  }
+
+  def build[A](path: String)(parse: Array[String] => A)(add: (List[A], A) => List[A])(implicit m: ClassTag[A]): PrefixTree[Array[A]] = {
+    Using[Source, PrefixTree[Array[A]]](Source.fromFile(path)) { s =>
+      val pt = PrefixTree[List[A]](700000);
+      s.getLines.foreach { line =>
+        val arr = line.split("\t");
+        val surface = arr.head;
+        val elem = parse(arr);
+        pt.add[A](surface, elem)(add);
+      }
+      pt.convertDataType[Array[A]] { data =>
+        data match {
+          case ls @ x :: xs => ls.toArray;
+          case _            => null;
+        }
+      }
+    }
+  }
+
+  def check[A](prefixree: PrefixTree[Array[A]], path: String)(parse: Array[String] => A)(exists: (A, Array[A]) => Boolean): Unit = {
+    var errors = Using[Source, List[String]](Source.fromFile(path)) { s =>
+      s.getLines.foldLeft(List[String]()) { (es, line) =>
+        val msg = "input : " + line + "\noutput : ";
+        val arr = line.split("\t");
+        val surface = arr.head;
+        val elem = parse(arr);
+        prefixree.find(surface) match {
+          case None     => msg + "None" :: es;
+          case Some(ds) => if (exists(elem, ds)) es  else msg + ds.length :: es;
+        }
+      }
+    }
+    errors match {
+      case Nil => println("OK!!!");
+      case ls  => println(ls.mkString("\n"));
+    }
   }
 }
 
