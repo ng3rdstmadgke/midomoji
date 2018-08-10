@@ -1,0 +1,27 @@
+##################################################################################
+# 形態素解析で利用する文字種とトークン生成ルールの定義を行う
+# DEFAULTは必須
+#
+# [ format ]
+#   CHAR_TYPE_NAME	FORCE_UNIGRAM	GROUP	NGRAM
+#
+#     CHAR_TYPE_NAME   文字種の名前。属する文字はconfig/char_type.defで定義
+#     FORCE_UNIGRAM    0 : 辞書に登録されていなければunigramを作る
+#                      1 : 強制的にunigramを作る。
+#     GROUP_TOKEN      0 : 同じ文字種が連続した文字列でトークンを生成しない
+#                      1 : 同じ文字種が連続した文字列でトークンを生成する
+#     NGRAM            指定した数までのトークンを生成する
+#                      (3なら2gramと3gram、0 or 1の場合は生成しない)
+#
+##################################################################################
+DEFAULT	0	1	0
+SPACE	0	1	0
+KANJI	0	0	2
+SYMBOL	1	1	0
+NUMERIC	1	1	0
+ALPHA	1	1	0
+HIRAGANA	0	1	2
+KATAKANA	1	1	2
+KANJINUMERIC	1	1	0
+GREEK	1	1	0
+CYRILLIC	1	1	0
