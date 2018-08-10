@@ -2,40 +2,59 @@ package com.github.ng3rdstmadgke.midomoji;
 
 import scala.io.Source;
 import scala.io.StdIn.readLine;
-import scala.collection.mutable.{ListBuffer, HashMap};
+import scala.collection.mutable.ListBuffer;
 import java.text.Normalizer;
 
 object Main {
-
-  
   def main(args: Array[String]): Unit = {
     args.toList match {
-      // --build ./dictionary/matrix.def ./dictionary/morpheme.csv ./dictionary/dictionary_set.bin
-      case ("--build") :: mtPath :: ptPath :: dictPath :: xs => {
-        val matrix = Util.createMT(mtPath);
-        val prefixtree = Util.createPT(ptPath);
-        DictionarySet[Array[Int]](prefixtree, matrix).serialize(dictPath);
+      // --build-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
+      case ("--build-dict") :: morphemePath :: dictBin :: xs => {
+        val parse = (arr: Array[String]) => {
+          val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
+          Array(left, right, cost, pos, k1, k2).map(_.toInt);
+        }
+        val add = (existing: List[Array[Int]], elem: Array[Int]) => {
+          existing match {
+            case ls: List[Array[Int]] => elem :: ls;
+            case _                    => List[Array[Int]](elem);
+          }
+        }
+        val prefixtree = PrefixTree.build[Array[Int]](morphemePath)(parse)(add);
+        Util.serialize[PrefixTree[Array[Array[Int]]]](prefixtree, dictBin);
       }
 
-      // --check-matrix ./dictionary/dictionary_set.bin ./dictionary/matrix.def
-      case ("--check-matrix") :: dictPath :: mtPath :: xs => {
-        val dictSet = DictionarySet[Array[Int]](dictPath);
-        val mt = dictSet.matrix;
-        Util.checkMT(mt, mtPath);
+      // --build-matrix ./dictionary/matrix.def ./dictionary/matrix.bin
+      case ("--build-matrix") :: matrixPath :: matrixBin :: xs => {
+        val matrix = Matrix.build(matrixPath);
+        Util.serialize[Matrix](matrix, matrixBin);
       }
 
-      // --check-prefixtree ./dictionary/dictionary_set.bin ./dictionary/morpheme.csv
-      case ("--check-prefixtree") :: dictPath :: ptPath :: xs => {
-        val dictSet = DictionarySet[Array[Int]](dictPath);
-        val pt = dictSet.prefixtree;
-        Util.checkPT(pt, ptPath);
+      // --build-config ./dictionary/char.tsv ./dictionary/char_type.tsv ./dictionary/unk.tsv ./dictionary/config.bin
+      case ("--build-config") :: charPath :: charTypePath :: unkPath :: configBin :: xs => {
+        val charType = CharType.buildCharType(charPath, charTypePath, unkPath);
+        Util.serialize[CharType](charType, configBin);
       }
 
-      case ("-d" | "--debug") :: xs => {
-        debug();
+      // --check-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
+      case ("--check-dict") :: morphemePath :: dictBin :: xs => {
+        val prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
+        val parse = (arr: Array[String]) => {
+          val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
+          Array(left, right, cost, pos, k1, k2).map(_.toInt);
+        }
+        val exists = (elem: Array[Int], es: Array[Array[Int]]) => es.exists(e => elem.sameElements(e));
+        PrefixTree.check[Array[Int]](prefixtree, morphemePath)(parse)(exists);
       }
-      case ("-a" | "--analysis") :: xs  => {
-        println("解析");
+
+      // --check-matrix ./dictionary/matrix.def ./dictionary/matrix.bin
+      case ("--check-matrix") :: matrixPath :: matrixBin :: xs => {
+        val matrix = Util.deserialize[Matrix](matrixBin);
+        Matrix.check(matrix, matrixPath);
+      }
+
+      case ("--debug") :: dictBin :: matrixBin :: configBin :: xs => {
+        debug(dictBin, matrixBin, configBin);
       }
       case _ => {
         val help = ListBuffer[String]();
@@ -47,37 +66,34 @@ object Main {
     }
   }
 
-  def debug(): Unit = {
-    var prefixtree: PrefixTree[Array[Int]] = PrefixTree[Array[Int]](500000);
-    var matrix: Matrix = Matrix(1316, 1316);
+  def debug(dictBin: String, matrixBin: String, configBin: String): Unit = {
+    var prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
+    var matrix     = Util.deserialize[Matrix](matrixBin);
+    var charType   = Util.deserialize[CharType](configBin);
     def go(): Unit = {
       print("command : ");
       readLine.split(" ").toList match {
-        case "exit" :: xs => return ();
-        case "deserialize" :: dict :: xs => {
-          val dictSet = DictionarySet[Array[Int]](dict);
-          prefixtree = dictSet.prefixtree;
-          matrix = dictSet.matrix;
+        case "init" :: xs => {
+          prefixtree = PrefixTree[Array[Array[Int]]](5);
+          matrix     = Matrix(1316, 1316);
+          charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
         }
-        case "create" :: dict :: xs =>{
-          prefixtree = Util.createPT(dict);
-        }
-        case "check" :: ptPath :: xs =>{
-          Util.checkPT(prefixtree, ptPath);
+        case "deserialize" :: dictBin :: matrixBin :: configBin :: xs => {
+          prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
+          matrix     = Util.deserialize[Matrix](matrixBin);
+          charType   = Util.deserialize[CharType](configBin);
         }
         case "cost" :: l :: r :: xs => {
-          val left  = Util.toIntOption(l);
-          val right = Util.toIntOption(r);
-          if (matrix != null && left != None && right != None) {
-            println(matrix.getCost(left.get, right.get));
-          } else {
-            println("matrix is null or invalid args");
+          try {
+            println(matrix.getCost(l.toInt, r.toInt));
+          } catch {
+            case _ : Throwable => println("invalid args");;
           }
         }
         case "find" :: surface :: xs => {
           prefixtree.find(surface) match {
             case None    => println("not found");
-            case Some(m) => println(m.map(e => "(" + e.mkString(", ") + ")"));
+            case Some(m) => println(m);
           }
         }
         case "search" :: surface :: xs => {
@@ -92,9 +108,20 @@ object Main {
             }
           }
         }
-        case "analize" :: text :: xs => {
+        case "tokenize" :: text :: xs => {
+          val len = text.length;
+          val tokenizer = new Tokenizer[Array[Array[Int]]](charType, prefixtree);
+          val lattice = tokenizer.tokenize(text, Array.fill[List[LatticeNode]](len + 2)(Nil));
+          println("0 : BOS");
+          (0 to len + 1).foreach { i =>
+            println("%d : ".format(i));
+            println("  " + lattice(i).mkString("\n"));
+          }
+          println("%d : EOS".format(len + 1));
+        }
+        case "analyze" :: text :: xs => {
           val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
-          val viterbi = Viterbi(prefixtree, matrix);
+          val viterbi = Viterbi(prefixtree, matrix, charType);
           viterbi.analize(normalized) match {
             case None => println("ノードが途中で途切れました");
             case Some((list, cost)) => {
@@ -104,11 +131,18 @@ object Main {
           }
         }
         case "add" :: surface :: xs => {
-          prefixtree.add(surface, Array(1,1,1));
-        }
-        case "init" :: xs => {
-          prefixtree = PrefixTree[Array[Int]](5);
-          matrix = Matrix(1316, 1316);
+          prefixtree.add(surface, Array(1,1,1,1)) { (existing, elem) =>
+            existing match {
+              case arr: Array[Array[Int]] => {
+                val len = arr.length;
+                val newArr = new Array[Array[Int]](len + 1);
+                (0 until len).foreach(i => newArr(i) = arr(i));
+                newArr(len) = elem;
+                newArr;
+              }
+              case _ => Array[Array[Int]](elem);
+            }
+          };
         }
         case "dump" :: xs => {
           prefixtree.dump;
@@ -123,19 +157,19 @@ object Main {
             println("dict is null");
           }
         }
+        case "exit" :: xs => return ();
         case _ => {
           val help = ListBuffer[String]();
-          help += "exit                : デバッグモードを終了する";
+          help += "init                : 辞書をリセットする";
           help += "deserialize [DICT]  : 構築済み辞書を読み込む";
-          help += "create [DICT]       : ";
-          help += "check [DICT] [PT]   : ";
-          help += "cost [LEFT] [RIGHT] : ";
-          help += "find [SURFACE]      : ";
-          help += "search [TEXT]       : ";
-          help += "add [SURFACE]       : ";
-          help += "init                : ";
-          help += "dump                : ";
-          help += "status              : ";
+          help += "cost [LEFT] [RIGHT] : 連接コストを表示する";
+          help += "find [SURFACE]      : トライ木に対してSURFACEをキーとする値を取り出す";
+          help += "search [TEXT]       : トライ木に対して共通接頭辞検索を行う";
+          help += "analyze [TEXT]      : 形態素解析を行う";
+          help += "add [SURFACE]       : トライ木に要素を追加する";
+          help += "dump                : トライ木をダンプする";
+          help += "status              : 辞書のステータスを表示する";
+          help += "exit                : デバッグモードを終了する";
           println(help.mkString("\n"));
         }
       }

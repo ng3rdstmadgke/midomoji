@@ -4,7 +4,8 @@ import scala.collection.mutable.HashMap;
 
 case class LatticeNode(val surface: String, val leftId: Int, val rightId: Int, val cost: Int, val prevIdx: Int);
 
-class Viterbi private (private val prefixtree: PrefixTree[Array[Int]], private val matrix: Matrix) {
+class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix, val charType: CharType) {
+  val tokenizer = new Tokenizer[Array[Array[Int]]](charType, prefixtree);
 
   def analize(text: String): Option[(List[LatticeNode], Int)] = {
     val lattice = createLattice(text);
@@ -46,29 +47,28 @@ class Viterbi private (private val prefixtree: PrefixTree[Array[Int]], private v
 
   def createLattice(text: String): Array[List[LatticeNode]] = {
     val len = text.length;
-    val lattice   = Array.fill[List[LatticeNode]](len + 2)(Nil);
+    // Indexは1スタート
+    // 辞書からラティス構造を構築
+    val lattice = Array.fill[List[LatticeNode]](len + 2)(Nil);
     (0 until len).foreach { i =>
       val subText  = text.slice(i, len);
       val prevIdx  = i;
       prefixtree.prefixSearch(subText).foreach { elem =>
         val surface = elem._1;
-        val currIdx  = i + surface.length;
-        elem._2.map{ data =>
-          LatticeNode(surface, data(0), data(1), data(2), prevIdx);
-        }.foreach {
-          node => lattice(currIdx) = node :: lattice(currIdx);
+        val tokens  = elem._2;
+        val endIdx  = i + surface.length;
+        tokens.foreach { token =>
+          lattice(endIdx) = LatticeNode(surface, token(0), token(1), token(2), prevIdx) :: lattice(endIdx);
         }
       }
     }
-    lattice;
+    // 未知語ノードを追加
+    tokenizer.tokenize(text, lattice);
   }
 }
 
 object Viterbi {
-  def apply(ds: DictionarySet[Array[Int]]): Viterbi = {
-    new Viterbi(ds.prefixtree, ds.matrix);
-  }
-  def apply(prefixtree: PrefixTree[Array[Int]], matrix: Matrix): Viterbi = {
-    new Viterbi(prefixtree, matrix);
+  def apply(prefixtree: PrefixTree[Array[Array[Int]]], matrix: Matrix, charType: CharType): Viterbi = {
+    new Viterbi(prefixtree, matrix, charType);
   }
 }
