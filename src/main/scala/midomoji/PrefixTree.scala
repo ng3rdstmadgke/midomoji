@@ -51,6 +51,21 @@ class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Arr
     }
     if (data(currIdx) == null) None else Some(data(currIdx));
   }
+  /**
+   * key に対応するデータを取得する。
+   * 
+   * @param char 取得するデータのキー
+   * @return key に対応するデータ
+   */
+  def find(char: Char): Option[A] = {
+    val currIdx = 1;
+    val nextIdx = base(currIdx) + char.toInt;
+    if (nextIdx < size && check(nextIdx) == currIdx) {
+      Some(data(nextIdx));
+    } else {
+      None;
+    }
+  }
 
   /**
    * key に前方一致するデータを取得する

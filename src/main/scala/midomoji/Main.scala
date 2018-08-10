@@ -6,8 +6,6 @@ import scala.collection.mutable.{ListBuffer, HashMap};
 import java.text.Normalizer;
 
 object Main {
-
-  
   def main(args: Array[String]): Unit = {
     args.toList match {
       // --build ./dictionary/matrix.def ./dictionary/pos-id.def ./dictionary/morpheme.csv ./dictionary/dictionary_set.bin
@@ -16,6 +14,13 @@ object Main {
         val (posMap, posArr) = Util.createPosMap(posPath);
         val prefixtree = Util.createPT(ptPath, posMap);
         DictionarySet[Array[Array[Int]]](prefixtree, matrix, posArr).serialize(dictPath);
+      }
+
+      // --build-config ./dictionary/char.tsv ./dictionary/char_type.tsv ./dictionary/unk.tsv ./dictionary/config.bin
+      case ("--build-config") :: charPath :: charTypePath :: unkPath :: confPath :: xs => {
+        val charType = CharType.buildCharType(charPath, charTypePath, unkPath);
+        val configSet = new ConfigSet(charType);
+        configSet.serialize(confPath);
       }
 
       // --check-matrix ./dictionary/dictionary_set.bin ./dictionary/matrix.def
@@ -51,6 +56,7 @@ object Main {
   def debug(): Unit = {
     var prefixtree = PrefixTree[Array[Array[Int]]](5);
     var matrix     = Matrix(1316, 1316);
+    var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
     var posArr     = Array[Array[String]]();
     def go(): Unit = {
       print("command : ");
@@ -60,11 +66,12 @@ object Main {
           matrix     = Matrix(1316, 1316);
           posArr     = Array[Array[String]]();
         }
-        case "deserialize" :: dict :: xs => {
+        case "deserialize" :: dict :: config :: xs => {
           val dictSet = DictionarySet[Array[Array[Int]]](dict);
           prefixtree = dictSet.prefixtree;
           matrix     = dictSet.matrix;
           posArr     = dictSet.posArr;
+          charType = ConfigSet.deserialize(config).charType;
         }
         case "pos" :: xs => {
           posArr.zipWithIndex.foreach { e =>
@@ -100,7 +107,7 @@ object Main {
         }
         case "analyze" :: text :: xs => {
           val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
-          val viterbi = Viterbi(prefixtree, matrix);
+          val viterbi = Viterbi(prefixtree, matrix, charType);
           viterbi.analize(normalized) match {
             case None => println("ノードが途中で途切れました");
             case Some((list, cost)) => {

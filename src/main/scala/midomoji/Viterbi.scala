@@ -4,7 +4,8 @@ import scala.collection.mutable.HashMap;
 
 case class LatticeNode(val surface: String, val leftId: Int, val rightId: Int, val cost: Int, val prevIdx: Int);
 
-class Viterbi private (private val prefixtree: PrefixTree[Array[Array[Int]]], private val matrix: Matrix) {
+class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix, val charType: CharType) {
+  val tokenizer = new Tokenizer[Array[Array[Int]]](charType, prefixtree);
 
   def analize(text: String): Option[(List[LatticeNode], Int)] = {
     val lattice = createLattice(text);
@@ -61,23 +62,13 @@ class Viterbi private (private val prefixtree: PrefixTree[Array[Array[Int]]], pr
         }
       }
     }
-    // ラティス構造に未知語ノードを追加
-    val tokenizer = Tokenizer(prefixtree);
-    tokenizer.tokenize(text).foreach { node =>
-      val (startIdx, endIdx, surface, tokens) = node;
-      tokens.foreach { token =>
-        lattice(endIdx) = LatticeNode(surface, token(0), token(1), token(2), startIdx - 1) :: lattice(endIdx);
-      }
-    }
-    lattice;
+    // 未知語ノードを追加
+    tokenizer.tokenize(text, lattice);
   }
 }
 
 object Viterbi {
-  def apply(ds: DictionarySet[Array[Array[Int]]]): Viterbi = {
-    new Viterbi(ds.prefixtree, ds.matrix);
-  }
-  def apply(prefixtree: PrefixTree[Array[Array[Int]]], matrix: Matrix): Viterbi = {
-    new Viterbi(prefixtree, matrix);
+  def apply(prefixtree: PrefixTree[Array[Array[Int]]], matrix: Matrix, charType: CharType): Viterbi = {
+    new Viterbi(prefixtree, matrix, charType);
   }
 }
