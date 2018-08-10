@@ -4,7 +4,7 @@ import java.io.{OutputStream, InputStream, ObjectOutputStream, ObjectInputStream
 import java.nio.file.{Paths, Files};
 
 @SerialVersionUID(1L)
-class DictionarySet[A](val prefixtree: PrefixTree[A], val matrix: Matrix, val posArr: Array[Array[String]]) extends Serializable {
+class DictionarySet[A](val prefixtree: PrefixTree[A], val matrix: Matrix) extends Serializable {
 
   def serialize(dictPath: String): Unit = {
     Using[OutputStream, Unit](Files.newOutputStream(Paths.get(dictPath))) { os =>
@@ -16,7 +16,7 @@ class DictionarySet[A](val prefixtree: PrefixTree[A], val matrix: Matrix, val po
 }
 
 object DictionarySet {
-  def apply[A](prefixtree: PrefixTree[A], matrix: Matrix, posArr: Array[Array[String]]): DictionarySet[A] = new DictionarySet(prefixtree, matrix, posArr);
+  def apply[A](prefixtree: PrefixTree[A], matrix: Matrix): DictionarySet[A] = new DictionarySet(prefixtree, matrix);
   def apply[A](dictPath: String): DictionarySet[A] = {
     Using[InputStream, DictionarySet[A]](Files.newInputStream(Paths.get(dictPath))) { is =>
       Using[ObjectInputStream,DictionarySet[A]](new ObjectInputStream(is)) { ois =>

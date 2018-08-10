@@ -11,7 +11,6 @@ object Main {
       // --build ./dictionary/matrix.def ./dictionary/pos-id.def ./dictionary/morpheme.csv ./dictionary/dictionary_set.bin
       case ("--build") :: mtPath :: posPath :: ptPath :: dictPath :: xs => {
         val matrix = Matrix.build(mtPath);
-        val (posMap, posArr) = Util.createPosMap(posPath);
         val parse = (arr: Array[String]) => {
           val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
           Array(left, right, cost, pos, k1, k2).map(_.toInt);
@@ -23,7 +22,7 @@ object Main {
           }
         }
         val prefixtree = PrefixTree.build[Array[Int]](ptPath)(parse)(add);
-        DictionarySet[Array[Array[Int]]](prefixtree, matrix, posArr).serialize(dictPath);
+        DictionarySet[Array[Array[Int]]](prefixtree, matrix).serialize(dictPath);
       }
 
       // --build-config ./dictionary/char.tsv ./dictionary/char_type.tsv ./dictionary/unk.tsv ./dictionary/config.bin
@@ -72,28 +71,18 @@ object Main {
     var prefixtree = PrefixTree[Array[Array[Int]]](5);
     var matrix     = Matrix(1316, 1316);
     var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
-    var posArr     = Array[Array[String]]();
     def go(): Unit = {
       print("command : ");
       readLine.split(" ").toList match {
         case "init" :: xs => {
           prefixtree = PrefixTree[Array[Array[Int]]](5);
           matrix     = Matrix(1316, 1316);
-          posArr     = Array[Array[String]]();
         }
         case "deserialize" :: dict :: config :: xs => {
           val dictSet = DictionarySet[Array[Array[Int]]](dict);
           prefixtree = dictSet.prefixtree;
           matrix     = dictSet.matrix;
-          posArr     = dictSet.posArr;
           charType = ConfigSet.deserialize(config).charType;
-        }
-        case "pos" :: xs => {
-          posArr.zipWithIndex.foreach { e =>
-            val idx = e._2;
-            val pos = e._1.mkString(", ");
-            println(idx + " : " + pos);
-          }
         }
         case "cost" :: l :: r :: xs => {
           try {
