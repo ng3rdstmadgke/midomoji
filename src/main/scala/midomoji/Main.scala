@@ -10,7 +10,7 @@ object Main {
     args.toList match {
       // --build ./dictionary/matrix.def ./dictionary/pos-id.def ./dictionary/morpheme.csv ./dictionary/dictionary_set.bin
       case ("--build") :: mtPath :: posPath :: ptPath :: dictPath :: xs => {
-        val matrix = Util.createMT(mtPath);
+        val matrix = Matrix.build(mtPath);
         val (posMap, posArr) = Util.createPosMap(posPath);
         val prefixtree = Util.createPT(ptPath, posMap);
         DictionarySet[Array[Array[Int]]](prefixtree, matrix, posArr).serialize(dictPath);
@@ -27,7 +27,7 @@ object Main {
       case ("--check-matrix") :: dictPath :: mtPath :: xs => {
         val dictSet = DictionarySet[Array[Array[Int]]](dictPath);
         val mt = dictSet.matrix;
-        Util.checkMT(mt, mtPath);
+        Matrix.check(mt, mtPath);
       }
 
       // --check-prefixtree ./dictionary/dictionary_set.bin ./dictionary/morpheme.csv

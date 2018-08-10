@@ -22,67 +22,6 @@ object Using {
 object Util {
   def toIntOption(s: String): Option[Int] = Try(s.toInt).toOption;
 
-  def parseMTFirst(input: String): (Int, Int) = {
-    val list  = input.split(" ");
-    if (list.length == 2) {
-      val left  = Util.toIntOption(list(0));
-      val right = Util.toIntOption(list(1));
-      if (left != None && right != None) {
-        return (left.get, right.get);
-      }
-    }
-    return (0, 0);
-  }
-
-  def parseMT(input: String): Option[(Int, Int, Int)] = {
-    val list  = input.split(" ");
-    if (list.length == 3) {
-      val left  = Util.toIntOption(list(0));
-      val right = Util.toIntOption(list(1));
-      val cost  = Util.toIntOption(list(2));
-      if (left != None && right != None && cost != None) {
-        return Some((left.get, right.get, cost.get));
-      }
-    }
-    return None;
-  }
-
-  def createMT(path: String): Matrix = {
-    Using[Source, Matrix](Source.fromFile(path)) { s =>
-      // 1行目はコスト表の縦と横の大きさがスペース区切りで入っている。
-      val iter = s.getLines;
-      val (leftSize, rightSize) = if (iter.hasNext) Util.parseMTFirst(iter.next()) else (0, 0);
-      val mt = Matrix(leftSize, rightSize);
-      iter.foreach { line =>
-        Util.parseMT(line) match {
-          case None            => ();
-          case Some((l, r, c)) => mt.setCost(l, r, c);
-        }
-      }
-      mt;
-    }
-  }
-
-  def checkMT(matrix: Matrix, mtPath: String): Unit = {
-    val checkMatrix: Source => Boolean = s => {
-      s.getLines.foldLeft(true) { (ret, line) =>
-        Util.parseMT(line) match {
-          case None            => ret;
-          case Some((l, r, c)) => {
-            if (c == matrix.getCost(l, r)) {
-              ret;
-            } else {
-              println("left=%d, right=%d, cost=%d, dictCost=%d".format(l, r, c, matrix.getCost(l,r)));
-              false;
-            }
-          }
-        }
-      }
-    }
-    // 正しく登録されているかチェック
-    if (Using[Source, Boolean](Source.fromFile(mtPath))(checkMatrix)) println("OK!!") else println("NG...");
-  }
-
   def parsePos(input: String): Option[(String, Int)] = {
     val list = input.split(" ");
     if (list.length == 2) {
