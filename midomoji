@@ -4,18 +4,21 @@ function usage {
 cat >&2 <<EOF
 #####################################################################################
 # [ usage ]
-#   ./midomoji [ options ]
+#   ./midomoji <MODE> [ options ]
+#
+#   MODE build-dict    辞書のビルド
+#        build-matrix  連接コスト表のビルド
+#        build-config  設定ファイルのビルド
+#        check-dict    辞書のチェックを行う
+#        check-matrix  連接コスト表のチェックを行う
+#        debug         デバッグコンソール起動
 #
 # [ options ]
-#   -m check         トライ木と連接コスト表のチェックを行う
-#      build-dict    辞書のビルド
-#      build-config  辞書のビルド
-#      debug         デバッグコンソール起動
-#   -d [DICT] 辞書を指定(フルパスで指定)
 #   -h        ヘルプ
 #
 #####################################################################################
 EOF
+exit 1
 }
 
 function errlog {
@@ -40,51 +43,48 @@ done
 DATE=$(date "+%Y%m%d%H%M%S")
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 DICT_DIR=$SCRIPT_DIR/dictionary
-MATRIX=$DICT_DIR/matrix.def
-MORPHEME=$DICT_DIR/morpheme.csv
-POS_ID=$DICT_DIR/pos-id.def
-DICT_SET=$DICT_DIR/dictionary_set.bin
-CONFIG=$DICT_DIR/config.bin
+MORPHEME=$DICT_DIR/morpheme.tsv
+MATRIX=$DICT_DIR/matrix.tsv
 CHAR=$DICT_DIR/char.tsv
 CHAR_TYPE=$DICT_DIR/char_type.tsv
 UNK=$DICT_DIR/unk.tsv
+DICT_BIN=$DICT_DIR/dict.bin
+MATRIX_BIN=$DICT_DIR/matrix.bin
+CONFIG_BIN=$DICT_DIR/config.bin
 MODE=
 while [ "$#" != 0 ]; do
-  if [ "$1" = "-m" ]; then
-    shift
-    MODE=$1
-  elif [ "$1" = "-d" ]; then
-    shift
-    DICT_SET=$1
-  elif [ "$1" = "-h" ]; then
+  if [ "$1" = "-h" ]; then
     usage
+  elif [ -z "$MODE" ]; then
+    MODE=$1
   fi
   shift
 done
 
+if [ -z "$MODE" ]; then
+  usage
+fi
 
 JAR_FILE=$SCRIPT_DIR/target/scala-2.12/midomoji.jar
 file_exists $JAR_FILE
 
-if [ "$MODE" = "check" ]; then
-  file_exists $DICT_SET $MATRIX $MORPHEME
-  infolog "check matrix ..."
-  java -jar $JAR_FILE --check-matrix $DICT_SET $MATRIX
-  infolog "check prefixtree ..."
-  java -jar $JAR_FILE --check-prefixtree $DICT_SET $MORPHEME
-elif [ "$MODE" = "build-dict" ]; then
-  file_exists $MATRIX $POS_ID $MORPHEME
-  if [ -e "$DICT_SET" ]; then
-    mv $DICT_SET ${DICT_SET}.$DATE
-  fi
-  infolog "build dictionary ..."
-  java -jar $JAR_FILE --build $MATRIX $POS_ID $MORPHEME $DICT_SET
+if [ "$MODE" = "build-dict" ]; then
+  file_exists $MORPHEME
+  java -jar $JAR_FILE --build-dict $MORPHEME $DICT_BIN
+elif [ "$MODE" = "build-matrix" ]; then
+  file_exists $MATRIX
+  java -jar $JAR_FILE --build-matrix $MATRIX $MATRIX_BIN
 elif [ "$MODE" = "build-config" ]; then
   file_exists $CHAR $CHAR_TYPE $UNK
-  if [ -e "$CONFIG" ]; then
-    mv $CONFIG ${CONFIG}.$DATE
-  fi
-  java -jar $JAR_FILE --build-config $CHAR $CHAR_TYPE $UNK $CONFIG
+  java -jar $JAR_FILE --build-config $CHAR $CHAR_TYPE $UNK $CONFIG_BIN
+elif [ "$MODE" = "check-dict" ]; then
+  file_exists $MORPHEME
+  java -jar $JAR_FILE --check-dict $MORPHEME $DICT_BIN
+elif [ "$MODE" = "check-matrix" ]; then
+  file_exists $MATRIX
+  java -jar $JAR_FILE --check-matrix $MATRIX $MATRIX_BIN
 elif [ "$MODE" = "debug" ]; then
-  java -jar $JAR_FILE --debug
+  java -jar $JAR_FILE --debug $DICT_BIN $MATRIX_BIN $CONFIG_BIN
+else
+  usage
 fi
