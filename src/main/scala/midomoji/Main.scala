@@ -78,6 +78,11 @@ object Main {
           matrix     = Matrix(1316, 1316);
           charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
         }
+        case "serialize" :: dictBin :: matrixBin :: configBin :: xs => {
+          Util.serialize[PrefixTree[Array[Array[Int]]]](prefixtree, dictBin);
+          Util.serialize[Matrix](matrix, matrixBin);
+          Util.serialize[CharType](charType, configBin);
+        }
         case "deserialize" :: dictBin :: matrixBin :: configBin :: xs => {
           prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
           matrix     = Util.deserialize[Matrix](matrixBin);
@@ -90,16 +95,16 @@ object Main {
             case _ : Throwable => println("invalid args");;
           }
         }
-        case "find" :: surface :: xs => {
-          prefixtree.find(surface) match {
+        case "find" :: text :: xs => {
+          prefixtree.find(text) match {
             case None    => println("not found");
             case Some(m) => println(m);
           }
         }
-        case "search" :: surface :: xs => {
-          val len = surface.length;
+        case "search" :: text :: xs => {
+          val len = text.length;
           (0 until len).foreach { i =>
-            val sub = surface.slice(i, len);
+            val sub = text.slice(i, len);
             println("%d :".format(i + 1));
             prefixtree.prefixSearch(sub).foreach { e =>
               val surface = e._1;
@@ -113,7 +118,7 @@ object Main {
           val tokenizer = new Tokenizer[Array[Array[Int]]](charType, prefixtree);
           val lattice = tokenizer.tokenize(text, Array.fill[List[LatticeNode]](len + 2)(Nil));
           println("0 : BOS");
-          (0 to len + 1).foreach { i =>
+          (1 to len).foreach { i =>
             println("%d : ".format(i));
             println("  " + lattice(i).mkString("\n"));
           }
@@ -160,16 +165,18 @@ object Main {
         case "exit" :: xs => return ();
         case _ => {
           val help = ListBuffer[String]();
-          help += "init                : 辞書をリセットする";
-          help += "deserialize [DICT]  : 構築済み辞書を読み込む";
-          help += "cost [LEFT] [RIGHT] : 連接コストを表示する";
-          help += "find [SURFACE]      : トライ木に対してSURFACEをキーとする値を取り出す";
-          help += "search [TEXT]       : トライ木に対して共通接頭辞検索を行う";
-          help += "analyze [TEXT]      : 形態素解析を行う";
-          help += "add [SURFACE]       : トライ木に要素を追加する";
-          help += "dump                : トライ木をダンプする";
-          help += "status              : 辞書のステータスを表示する";
-          help += "exit                : デバッグモードを終了する";
+          help += "init                                 : 辞書をリセットする";
+          help += "serialize <DICT> <MATRIX> <CONFIG>   : 構築済み辞書を読み込む";
+          help += "deserialize <DICT> <MATRIX> <CONFIG> : 構築済み辞書を読み込む";
+          help += "cost <LEFT> <RIGHT>                  : 連接コストを表示する";
+          help += "find <TEXT>                          : トライ木に対してSURFACEをキーとする値を取り出す";
+          help += "search <TEXT>                        : トライ木に対して共通接頭辞検索を行う";
+          help += "tokenize <TEXT>                      : 未知語ノードの生成を行う";
+          help += "analyze <TEXT>                       : 形態素解析を行う";
+          help += "add <SURFACE>                        : トライ木に要素を追加する";
+          help += "dump                                 : トライ木をダンプする";
+          help += "status                               : 辞書のステータスを表示する";
+          help += "exit                                 : デバッグモードを終了する";
           println(help.mkString("\n"));
         }
       }
