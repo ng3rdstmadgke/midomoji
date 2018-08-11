@@ -7,7 +7,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
       GroupToken(0, 0, new StringBuilder(), charType.getTokenConfig(i));
     };
     def go(currIdx: Int): Unit = {
-      if (currIdx < len) {
+      if (currIdx <= len) {
         val char = text(currIdx - 1);
         val prevIdx = currIdx - 1;
         if (char.isHighSurrogate) {
@@ -42,12 +42,12 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
             }
             // ngramトークン生成
             if (tokenConfig.ngram > 1) {
-              val startIdx = currIdx;
-              var endIdx   = currIdx + tokenConfig.ngram - 1;
-              endIdx = if (endIdx < len) endIdx else len - 1;
+              val startIdx = currIdx + 1;
+              var endIdx   = currIdx + tokenConfig.ngram;
+              endIdx = if (endIdx > len + 1) len + 1 else endIdx;
               var ngram = str;
               (startIdx until endIdx).exists { nextIdx =>
-                val nextChar = text(nextIdx);
+                val nextChar = text(nextIdx - 1);
                 if (charType.getCharTypeIds(nextChar).exists(_ == charTypeId)) {
                   ngram += nextChar;
                   lattice(nextIdx) = tokenConfig.tokens.foldLeft(lattice(nextIdx)) { (nodes, token) =>
