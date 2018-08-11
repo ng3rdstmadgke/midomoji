@@ -36,6 +36,12 @@ object Main {
         Util.serialize[CharType](charType, configBin);
       }
 
+      // --build-pos-config ./dictionary/pos.tsv ./dictionary/katsuyou_gata.tsv ./dictionary/katsuyou_kei.tsv ./dictionary/pos_config.bin
+      case ("--build-pos-config") :: posPath :: katsuyouGataPath :: katsuyouKeiPath :: posConfigBin :: xs => {
+        val posConfig = PosConfig.build(posPath, katsuyouGataPath, katsuyouKeiPath);
+        Util.serialize[PosConfig](posConfig, posConfigBin);
+      }
+
       // --check-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
       case ("--check-dict") :: morphemePath :: dictBin :: xs => {
         val prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
@@ -53,8 +59,8 @@ object Main {
         Matrix.check(matrix, matrixPath);
       }
 
-      case ("--debug") :: dictBin :: matrixBin :: configBin :: xs => {
-        debug(dictBin, matrixBin, configBin);
+      case ("--debug") :: dictBin :: matrixBin :: configBin :: posConfigBin :: xs => {
+        debug(dictBin, matrixBin, configBin, posConfigBin);
       }
       case _ => {
         val help = ListBuffer[String]();
@@ -66,10 +72,11 @@ object Main {
     }
   }
 
-  def debug(dictBin: String, matrixBin: String, configBin: String): Unit = {
+  def debug(dictBin: String, matrixBin: String, configBin: String, posConfigBin: String): Unit = {
     var prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
     var matrix     = Util.deserialize[Matrix](matrixBin);
     var charType   = Util.deserialize[CharType](configBin);
+    var posConfig  = Util.deserialize[PosConfig](posConfigBin);
     def go(): Unit = {
       print("command : ");
       readLine.split(" ").toList match {
@@ -77,16 +84,19 @@ object Main {
           prefixtree = PrefixTree[Array[Array[Int]]](5);
           matrix     = Matrix(1316, 1316);
           charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
+          posConfig  = new PosConfig(Array[String](), Array[String](), Array[String]());
         }
-        case "serialize" :: dictBin :: matrixBin :: configBin :: xs => {
+        case "serialize" :: dictBin :: matrixBin :: configBin :: posConfigBin :: xs => {
           Util.serialize[PrefixTree[Array[Array[Int]]]](prefixtree, dictBin);
           Util.serialize[Matrix](matrix, matrixBin);
           Util.serialize[CharType](charType, configBin);
+          Util.serialize[PosConfig](posConfig, posConfigBin);
         }
         case "deserialize" :: dictBin :: matrixBin :: configBin :: xs => {
           prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
           matrix     = Util.deserialize[Matrix](matrixBin);
           charType   = Util.deserialize[CharType](configBin);
+          posConfig  = Util.deserialize[PosConfig](posConfigBin);
         }
         case "cost" :: l :: r :: xs => {
           try {
@@ -120,7 +130,7 @@ object Main {
           println("0 : BOS");
           (1 to len).foreach { i =>
             println("%d : ".format(i));
-            println("  " + lattice(i).mkString("\n"));
+            println(lattice(i).map("  " + _.toString(posConfig)).mkString("\n"));
           }
           println("%d : EOS".format(len + 1));
         }
@@ -131,7 +141,7 @@ object Main {
             case None => println("ノードが途中で途切れました");
             case Some((list, cost)) => {
               println("cost : " + cost);
-              println(list.tail.reverse.mkString("\n"));
+              println(list.reverse.map(_.toString(posConfig)).mkString("\n"));
             }
           }
         }

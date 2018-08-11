@@ -6,12 +6,13 @@ cat >&2 <<EOF
 # [ usage ]
 #   ./midomoji <MODE> [ options ]
 #
-#   MODE build-dict    辞書のビルド
-#        build-matrix  連接コスト表のビルド
-#        build-config  設定ファイルのビルド
-#        check-dict    辞書のチェックを行う
-#        check-matrix  連接コスト表のチェックを行う
-#        debug         デバッグコンソール起動
+#   MODE build-dict        辞書のビルド
+#        build-matrix      連接コスト表のビルド
+#        build-config      設定ファイルのビルド
+#        build-pos-config  品詞設定ファイルのビルド
+#        check-dict        辞書のチェックを行う
+#        check-matrix      連接コスト表のチェックを行う
+#        debug             デバッグコンソール起動
 #
 # [ options ]
 #   -h        ヘルプ
@@ -40,17 +41,14 @@ for file in $@; do
 done
 }
 
-DATE=$(date "+%Y%m%d%H%M%S")
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 DICT_DIR=$SCRIPT_DIR/dictionary
 MORPHEME=$DICT_DIR/morpheme.tsv
 MATRIX=$DICT_DIR/matrix.tsv
-CHAR=$DICT_DIR/char.tsv
-CHAR_TYPE=$DICT_DIR/char_type.tsv
-UNK=$DICT_DIR/unk.tsv
 DICT_BIN=$DICT_DIR/dict.bin
 MATRIX_BIN=$DICT_DIR/matrix.bin
 CONFIG_BIN=$DICT_DIR/config.bin
+POS_CONFIG_BIN=$DICT_DIR/pos_config.bin
 MODE=
 while [ "$#" != 0 ]; do
   if [ "$1" = "-h" ]; then
@@ -75,8 +73,17 @@ elif [ "$MODE" = "build-matrix" ]; then
   file_exists $MATRIX
   java -jar $JAR_FILE --build-matrix $MATRIX $MATRIX_BIN
 elif [ "$MODE" = "build-config" ]; then
+  CHAR=$DICT_DIR/char.tsv
+  CHAR_TYPE=$DICT_DIR/char_type.tsv
+  UNK=$DICT_DIR/unk.tsv
   file_exists $CHAR $CHAR_TYPE $UNK
   java -jar $JAR_FILE --build-config $CHAR $CHAR_TYPE $UNK $CONFIG_BIN
+elif [ "$MODE" = "build-pos-config" ]; then
+  POS=$DICT_DIR/pos.tsv
+  KATSUYOU_GATA=$DICT_DIR/katsuyou_gata.tsv
+  KATSUYOU_KEI=$DICT_DIR/katsuyou_kei.tsv
+  file_exists $POS $KATSUYOU_GATA $KATSUYOU_KEI
+  java -jar $JAR_FILE --build-pos-config $POS $KATSUYOU_GATA $KATSUYOU_KEI $POS_CONFIG_BIN
 elif [ "$MODE" = "check-dict" ]; then
   file_exists $MORPHEME
   java -jar $JAR_FILE --check-dict $MORPHEME $DICT_BIN
@@ -84,7 +91,7 @@ elif [ "$MODE" = "check-matrix" ]; then
   file_exists $MATRIX
   java -jar $JAR_FILE --check-matrix $MATRIX $MATRIX_BIN
 elif [ "$MODE" = "debug" ]; then
-  java -jar $JAR_FILE --debug $DICT_BIN $MATRIX_BIN $CONFIG_BIN
+  java -jar $JAR_FILE --debug $DICT_BIN $MATRIX_BIN $CONFIG_BIN $POS_CONFIG_BIN
 else
   usage
 fi

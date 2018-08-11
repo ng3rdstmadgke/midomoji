@@ -2,7 +2,7 @@ package com.github.ng3rdstmadgke.midomoji
 
 import scala.io.Source;
 
-case class Token(leftId: Int, rightId: Int, cost: Int, pos: String) extends Serializable ;
+case class Token(leftId: Int, rightId: Int, cost: Int, pos: Int) extends Serializable ;
 case class TokenConfig(charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Token]) extends Serializable;
 
 class CharType(val charTypeMap: Array[Array[Int]], val tokenConfigSet: Array[TokenConfig]) extends Serializable {
@@ -46,7 +46,7 @@ object CharType {
     val unkArr = Using[Source, Array[(String, Token)]](Source.fromFile(unkDef)) { s =>
       s.getLines.toArray.map{ line =>
         val arr = line.split("\t").map(_.trim);
-        (arr(0), Token(arr(1).toInt, arr(2).toInt, arr(3).toInt, arr(4)));
+        (arr(0), Token(arr(1).toInt, arr(2).toInt, arr(3).toInt, arr(4).toInt));
       };
     };
     // 文字種名とIDのマップ

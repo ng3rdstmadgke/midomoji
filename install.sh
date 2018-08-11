@@ -17,5 +17,6 @@ sbt clean assembly || exit 1
 $SCRIPT_DIR/midomoji build-dict || exit 1
 $SCRIPT_DIR/midomoji build-matrix || exit 1
 $SCRIPT_DIR/midomoji build-config || exit 1
+$SCRIPT_DIR/midomoji build-pos-config || exit 1
 $SCRIPT_DIR/midomoji check-dict || exit 1
 $SCRIPT_DIR/midomoji check-matrix || exit 1
