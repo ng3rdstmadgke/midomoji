@@ -4,7 +4,7 @@ import scala.reflect.ClassTag;
 import scala.collection.AbstractIterator;
 import scala.io.Source;
 
-class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Array[Int], var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
+class PrefixTree[A](var size: Int, var base: Array[Int], var check: Array[Int], var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
   private var none: A = _; // A型のnull値
 
   /**
@@ -17,7 +17,7 @@ class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Arr
     val currData = data;
     val newData = c.newArray(size);
     (0 until size).foreach ( i => newData(i) = convert(currData(i)));
-    PrefixTree[C](size, base, check, newData);
+    new PrefixTree[C](size, base, check, newData);
   }
 
   /**
@@ -67,6 +67,8 @@ class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Arr
    * 
    * @param key 登録対象のデータのキー
    * @param value 登録対象のデータ
+   * @param func dataに新しいデータを追加する関数。
+   *             既存データと追加データを引数にとり、新しくdataに格納するデータを返す
    */
   def add[B](key: String, value: B)(func: (A, B) => A): Unit = {
     // よく使うフィールドをスタック変数として定義
@@ -123,7 +125,7 @@ class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Arr
 
   /**
    * すべての遷移先ノードを配置可能な base を求める
-   * 
+   *
    * @param nextNodes 遷移先ノードの配列 (index, charCode)
    * @return すべての遷移先ノードを配置可能な base
    */
@@ -152,7 +154,7 @@ class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Arr
 
   /**
    * base, check, data を引数のsizeの1.25倍に拡張する。
-   * 
+   *
    * @param newSizeBase 拡張後のサイズの基準値
    */
    private def extendsArray(newSizeBase: Int): Unit = {
@@ -221,10 +223,13 @@ object PrefixTree {
     new PrefixTree[A](size, base, check, data);
   }
 
-  def apply[A](size: Int, base: Array[Int], check: Array[Int], data: Array[A])(implicit m: ClassTag[A]): PrefixTree[A] = {
-    new PrefixTree[A](size, base, check, data);
-  }
-
+  /**
+   * 辞書ファイルからトライ木を構築するメソッド
+   *
+   * @param path 辞書ファイル
+   * @param parse 辞書ファイルの行を行をパースして、トライ木に登録するオブジェクトに変換する関数
+   * @param add PrefixTree#addで利用する関数
+   */
   def build[A](path: String)(parse: Array[String] => A)(add: (List[A], A) => List[A])(implicit m: ClassTag[A]): PrefixTree[Array[A]] = {
     Using[Source, PrefixTree[Array[A]]](Source.fromFile(path)) { s =>
       val pt = PrefixTree[List[A]](700000);
@@ -243,6 +248,14 @@ object PrefixTree {
     }
   }
 
+  /**
+   * path の形態素がprefixtreeにすべて登録されているかチェックするメソッド
+   *
+   * @param prefixree テスト対象のトライ木
+   * @param path トライ木に登録した辞書ファイル
+   * @param parse 辞書ファイルの行を行をパースして、トライ木に登録してあるオブジェクトに変換する関数
+   * @param exists トライ木の検索結果の中に、parseで生成したオブジェクトが含まれているかチェックする関数(含んでいればtrue)
+   */
   def check[A](prefixree: PrefixTree[Array[A]], path: String)(parse: Array[String] => A)(exists: (A, Array[A]) => Boolean): Unit = {
     var errors = Using[Source, List[String]](Source.fromFile(path)) { s =>
       s.getLines.foldLeft(List[String]()) { (es, line) =>
