@@ -47,7 +47,7 @@ class PrefixTree[A] private (var size: Int, var base: Array[Int], var check: Arr
   def find(char: Char): Option[A] = {
     val currIdx = 1;
     val nextIdx = base(currIdx) + char.toInt;
-    if (nextIdx < size && check(nextIdx) == currIdx && data(currIdx) != null) {
+    if (nextIdx < size && check(nextIdx) == currIdx && data(nextIdx) != null) {
       Some(data(nextIdx));
     } else {
       None;
