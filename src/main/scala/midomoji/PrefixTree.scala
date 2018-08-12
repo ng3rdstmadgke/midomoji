@@ -226,12 +226,12 @@ object PrefixTree {
   /**
    * 辞書ファイルからトライ木を構築するメソッド
    *
-   * @param path 辞書ファイル
+   * @param morphemePath 辞書ファイル
    * @param parse 辞書ファイルの行を行をパースして、トライ木に登録するオブジェクトに変換する関数
    * @param add PrefixTree#addで利用する関数
    */
-  def build[A](path: String)(parse: Array[String] => A)(add: (List[A], A) => List[A])(implicit m: ClassTag[A]): PrefixTree[Array[A]] = {
-    Using[Source, PrefixTree[Array[A]]](Source.fromFile(path)) { s =>
+  def build[A](morphemePath: String)(parse: Array[String] => A)(add: (List[A], A) => List[A])(implicit m: ClassTag[A]): PrefixTree[Array[A]] = {
+    Using[Source, PrefixTree[Array[A]]](Source.fromFile(morphemePath)) { s =>
       val pt = PrefixTree[List[A]](700000);
       s.getLines.foreach { line =>
         val arr = line.split("\t");
@@ -249,15 +249,15 @@ object PrefixTree {
   }
 
   /**
-   * path の形態素がprefixtreeにすべて登録されているかチェックするメソッド
+   * morphemePath の形態素がprefixtreeにすべて登録されているかチェックするメソッド
    *
    * @param prefixree テスト対象のトライ木
-   * @param path トライ木に登録した辞書ファイル
+   * @param morphemePath トライ木に登録した辞書ファイル
    * @param parse 辞書ファイルの行を行をパースして、トライ木に登録してあるオブジェクトに変換する関数
    * @param exists トライ木の検索結果の中に、parseで生成したオブジェクトが含まれているかチェックする関数(含んでいればtrue)
    */
-  def check[A](prefixree: PrefixTree[Array[A]], path: String)(parse: Array[String] => A)(exists: (A, Array[A]) => Boolean): Unit = {
-    var errors = Using[Source, List[String]](Source.fromFile(path)) { s =>
+  def check[A](prefixree: PrefixTree[Array[A]], morphemePath: String)(parse: Array[String] => A)(exists: (A, Array[A]) => Boolean): Unit = {
+    var errors = Using[Source, List[String]](Source.fromFile(morphemePath)) { s =>
       s.getLines.foldLeft(List[String]()) { (es, line) =>
         val msg = "input : " + line + "\noutput : ";
         val arr = line.split("\t");

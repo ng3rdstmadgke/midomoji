@@ -33,7 +33,7 @@ object Main {
 
       // --build-config ./dictionary/char.tsv ./dictionary/char_type.tsv ./dictionary/unk.tsv ./dictionary/config.bin
       case ("--build-config") :: charPath :: charTypePath :: unkPath :: configBin :: xs => {
-        val charType = CharType.buildCharType(charPath, charTypePath, unkPath);
+        val charType = CharType.build(charPath, charTypePath, unkPath);
         Util.kryoSerialize[CharType](charType, configBin);
       }
 

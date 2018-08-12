@@ -28,16 +28,16 @@ class CharType(val charTypeMap: Array[Array[Int]], val tokenConfigSet: Array[Tok
 }
 
 object CharType {
-  def buildCharType(charDef: String, charTypeDef: String, unkDef: String): CharType = {
+  def build(charPath: String, charTypePath: String, unkPath: String): CharType = {
     // char.def
-    val charArr = Using[Source, Array[(String, Boolean, Boolean, Int)]](Source.fromFile(charDef)) { s =>
+    val charArr = Using[Source, Array[(String, Boolean, Boolean, Int)]](Source.fromFile(charPath)) { s =>
       s.getLines.toArray.map{ line =>
         val arr = line.split("\t").map(_.trim);
         (arr(0), arr(1) == "1", arr(2) == "1", arr(3).toInt);
       };
     }
     // char_type.def
-    val charTypeArr = Using[Source, Array[((Int, Int), List[String])]](Source.fromFile(charTypeDef)) { s =>
+    val charTypeArr = Using[Source, Array[((Int, Int), List[String])]](Source.fromFile(charTypePath)) { s =>
       s.getLines.toArray.map { line =>
         val arr = line.split("\t").map(_.trim);
         val range = arr(0).split("-") match {
@@ -49,7 +49,7 @@ object CharType {
       };
     }
     // unk.def
-    val unkArr = Using[Source, Array[(String, Token)]](Source.fromFile(unkDef)) { s =>
+    val unkArr = Using[Source, Array[(String, Token)]](Source.fromFile(unkPath)) { s =>
       s.getLines.toArray.map{ line =>
         val arr = line.split("\t").map(_.trim);
         (arr(0), Token(arr(1).toInt, arr(2).toInt, arr(3).toInt, arr(4).toInt));
