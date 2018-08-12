@@ -10,7 +10,7 @@ object Main {
   def main(args: Array[String]): Unit = {
     args.toList match {
       // --build-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
-      case ("--build-dict") :: morphemePath :: dictBin :: xs => {
+      case ("--build-dict") :: morphemePath :: dictBin :: Nil => {
         val parse = (arr: Array[String]) => {
           val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
           Array(left, right, cost, pos, k1, k2).map(_.toInt);
@@ -26,25 +26,25 @@ object Main {
       }
 
       // --build-matrix ./dictionary/matrix.def ./dictionary/matrix.bin
-      case ("--build-matrix") :: matrixPath :: matrixBin :: xs => {
+      case ("--build-matrix") :: matrixPath :: matrixBin :: Nil => {
         val matrix = Matrix.build(matrixPath);
         Util.kryoSerialize[Matrix](matrix, matrixBin);
       }
 
       // --build-config ./dictionary/char.tsv ./dictionary/char_type.tsv ./dictionary/unk.tsv ./dictionary/config.bin
-      case ("--build-config") :: charPath :: charTypePath :: unkPath :: configBin :: xs => {
+      case ("--build-config") :: charPath :: charTypePath :: unkPath :: configBin :: Nil => {
         val charType = CharType.build(charPath, charTypePath, unkPath);
         Util.kryoSerialize[CharType](charType, configBin);
       }
 
       // --build-pos-config ./dictionary/pos.tsv ./dictionary/katsuyou_gata.tsv ./dictionary/katsuyou_kei.tsv ./dictionary/pos_config.bin
-      case ("--build-pos-config") :: posPath :: katsuyouGataPath :: katsuyouKeiPath :: posConfigBin :: xs => {
+      case ("--build-pos-config") :: posPath :: katsuyouGataPath :: katsuyouKeiPath :: posConfigBin :: Nil => {
         val posConfig = PosConfig.build(posPath, katsuyouGataPath, katsuyouKeiPath);
         Util.kryoSerialize[PosConfig](posConfig, posConfigBin);
       }
 
       // --check-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
-      case ("--check-dict") :: morphemePath :: dictBin :: xs => {
+      case ("--check-dict") :: morphemePath :: dictBin :: Nil => {
         var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
         val parse = (arr: Array[String]) => {
           val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
@@ -55,21 +55,60 @@ object Main {
       }
 
       // --check-matrix ./dictionary/matrix.def ./dictionary/matrix.bin
-      case ("--check-matrix") :: matrixPath :: matrixBin :: xs => {
+      case ("--check-matrix") :: matrixPath :: matrixBin :: Nil => {
         val matrix = Util.kryoDeserialize[Matrix](matrixBin);
         Matrix.check(matrix, matrixPath);
       }
 
       // --debug ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_config.bin
-      case ("--debug") :: dictBin :: matrixBin :: configBin :: posConfigBin :: xs => {
+      case ("--debug") :: dictBin :: matrixBin :: configBin :: posConfigBin :: Nil => {
         debug(dictBin, matrixBin, configBin, posConfigBin);
       }
+
+      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_config.bin
+      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posConfigBin :: Nil => {
+        analyze(dictBin, matrixBin, configBin, posConfigBin);
+      }
+
+      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_config.bin
+      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posConfigBin :: targetPath :: Nil => {
+        analyze(dictBin, matrixBin, configBin, posConfigBin, targetPath);
+      }
+
       case _ => {
         val help = ListBuffer[String]();
         help += "-b, --build [MATRIX] [PREFIXTREE_PATH] [DICT]     : 辞書の構築";
         help += "-d, --debug                                       : デバッグモード起動";
         help += "-h, --help                                        : ヘルプの表示";
         println(help.mkString("\n"));
+      }
+    }
+  }
+
+  def analyze(dictBin: String, matrixBin: String, configBin: String, posConfigBin: String, targetPath: String = null): Unit = {
+    var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
+    var matrix     = Util.kryoDeserialize[Matrix](matrixBin);
+    var charType   = Util.kryoDeserialize[CharType](configBin);
+    var posConfig  = Util.kryoDeserialize[PosConfig](posConfigBin);
+    def _analyze(text: String): Unit = {
+      val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
+      val viterbi = Viterbi(prefixtree, matrix, charType);
+      viterbi.analize(normalized) match {
+        case None => System.err.println("ノードが途中で途切れました");
+        case Some((list, cost)) => {
+          println(list.reverse.map(_.toDebugString(posConfig)).mkString("\n"));
+        }
+      }
+    }
+    if (targetPath == null) {
+      var line = readLine;
+      while (line != null) {
+        _analyze(line);
+        line = readLine;
+      }
+    } else {
+      Using[Source, Unit](Source.fromFile(targetPath)) { s =>
+        s.getLines.foreach(_analyze(_));
       }
     }
   }
@@ -140,7 +179,7 @@ object Main {
           val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
           val viterbi = Viterbi(prefixtree, matrix, charType);
           viterbi.analize(normalized) match {
-            case None => println("ノードが途中で途切れました");
+            case None => System.err.println("ノードが途中で途切れました");
             case Some((list, cost)) => {
               println("cost : " + cost);
               println(list.reverse.map(_.toDebugString(posConfig)).mkString("\n"));

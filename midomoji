@@ -13,6 +13,7 @@ cat >&2 <<EOF
 #        check-dict        辞書のチェックを行う
 #        check-matrix      連接コスト表のチェックを行う
 #        debug             デバッグコンソール起動
+#        analyze           形態素解析
 #
 # [ options ]
 #   -h        ヘルプ
@@ -49,12 +50,15 @@ DICT_BIN=$DICT_DIR/dict.bin
 MATRIX_BIN=$DICT_DIR/matrix.bin
 CONFIG_BIN=$DICT_DIR/config.bin
 POS_CONFIG_BIN=$DICT_DIR/pos_config.bin
+ANALYZE_TARGET_FILE=
 MODE=
 while [ "$#" != 0 ]; do
   if [ "$1" = "-h" ]; then
     usage
   elif [ -z "$MODE" ]; then
     MODE=$1
+  elif [ "$MODE" = "analyze" -a -z "$ANALYZE_TARGET_FILE" ]; then
+    ANALYZE_TARGET_FILE=$1
   fi
   shift
 done
@@ -92,6 +96,8 @@ elif [ "$MODE" = "check-matrix" ]; then
   java -jar $JAR_FILE --check-matrix $MATRIX $MATRIX_BIN
 elif [ "$MODE" = "debug" ]; then
   java -jar $JAR_FILE --debug $DICT_BIN $MATRIX_BIN $CONFIG_BIN $POS_CONFIG_BIN
+elif [ "$MODE" = "analyze" ]; then
+  java -jar $JAR_FILE --analyze $DICT_BIN $MATRIX_BIN $CONFIG_BIN $POS_CONFIG_BIN $ANALYZE_TARGET_FILE
 else
   usage
 fi

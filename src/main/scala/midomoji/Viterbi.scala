@@ -5,7 +5,7 @@ import scala.collection.mutable.HashMap;
 case class LatticeNode(val surface: String, val leftId: Int       , val rightId: Int     , val cost: Int,
                        val pos: Int       , val katsuyouGata: Int, val katsuyouKei: Int, val prevIdx: Int) {
   def toDebugString(posConfig: PosConfig): String = {
-    val posStr = posConfig.getPos(pos).replace("\t", ",");
+    val posStr = posConfig.getPos(pos);
     val kgStr = posConfig.getkatsuyouGata(katsuyouGata);
     val kkStr = posConfig.getkatsuyouKei(katsuyouKei);
     "%s\t%d\t%d\t%d\t%s\t%s\t%s\t%d".format(surface, leftId, rightId, cost, posStr, kgStr, kkStr, prevIdx);
