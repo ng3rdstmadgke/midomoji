@@ -132,7 +132,7 @@ object Main {
           println("0 : BOS");
           (1 to len).foreach { i =>
             println("%d : ".format(i));
-            println(lattice(i).map("  " + _.toString(posConfig)).mkString("\n"));
+            println(lattice(i).map("  " + _.toDebugString(posConfig)).mkString("\n"));
           }
           println("%d : EOS".format(len + 1));
         }
@@ -143,7 +143,7 @@ object Main {
             case None => println("ノードが途中で途切れました");
             case Some((list, cost)) => {
               println("cost : " + cost);
-              println(list.reverse.map(_.toString(posConfig)).mkString("\n"));
+              println(list.reverse.map(_.toDebugString(posConfig)).mkString("\n"));
             }
           }
         }
