@@ -9,5 +9,8 @@ lazy val root = (project in file(".")).
     //test in assembly := {},
     mainClass in assembly := Some("com.github.ng3rdstmadgke.midomoji.Main"),
     assemblyJarName in assembly := "midomoji.jar",
-    libraryDependencies += scalaTest % Test
+    libraryDependencies += scalaTest % Test,
+    // https://mvnrepository.com/artifact/com.esotericsoftware/kryo
+    libraryDependencies += "com.esotericsoftware" % "kryo" % "4.0.2"
+
   )

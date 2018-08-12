@@ -4,6 +4,7 @@ import scala.io.Source;
 import scala.io.StdIn.readLine;
 import scala.collection.mutable.ListBuffer;
 import java.text.Normalizer;
+import java.io.{FileOutputStream, FileInputStream};
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -21,30 +22,30 @@ object Main {
           }
         }
         val prefixtree = PrefixTree.build[Array[Int]](morphemePath)(parse)(add);
-        Util.serialize[PrefixTree[Array[Array[Int]]]](prefixtree, dictBin);
+        Util.builtinSerialize[PrefixTree[Array[Array[Int]]]](prefixtree, dictBin);
       }
 
       // --build-matrix ./dictionary/matrix.def ./dictionary/matrix.bin
       case ("--build-matrix") :: matrixPath :: matrixBin :: xs => {
         val matrix = Matrix.build(matrixPath);
-        Util.serialize[Matrix](matrix, matrixBin);
+        Util.kryoSerialize[Matrix](matrix, matrixBin);
       }
 
       // --build-config ./dictionary/char.tsv ./dictionary/char_type.tsv ./dictionary/unk.tsv ./dictionary/config.bin
       case ("--build-config") :: charPath :: charTypePath :: unkPath :: configBin :: xs => {
         val charType = CharType.buildCharType(charPath, charTypePath, unkPath);
-        Util.serialize[CharType](charType, configBin);
+        Util.kryoSerialize[CharType](charType, configBin);
       }
 
       // --build-pos-config ./dictionary/pos.tsv ./dictionary/katsuyou_gata.tsv ./dictionary/katsuyou_kei.tsv ./dictionary/pos_config.bin
       case ("--build-pos-config") :: posPath :: katsuyouGataPath :: katsuyouKeiPath :: posConfigBin :: xs => {
         val posConfig = PosConfig.build(posPath, katsuyouGataPath, katsuyouKeiPath);
-        Util.serialize[PosConfig](posConfig, posConfigBin);
+        Util.kryoSerialize[PosConfig](posConfig, posConfigBin);
       }
 
       // --check-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
       case ("--check-dict") :: morphemePath :: dictBin :: xs => {
-        val prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
+        val prefixtree = Util.builtinDeserialize[PrefixTree[Array[Array[Int]]]](dictBin);
         val parse = (arr: Array[String]) => {
           val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
           Array(left, right, cost, pos, k1, k2).map(_.toInt);
@@ -55,10 +56,11 @@ object Main {
 
       // --check-matrix ./dictionary/matrix.def ./dictionary/matrix.bin
       case ("--check-matrix") :: matrixPath :: matrixBin :: xs => {
-        val matrix = Util.deserialize[Matrix](matrixBin);
+        val matrix = Util.kryoDeserialize[Matrix](matrixBin);
         Matrix.check(matrix, matrixPath);
       }
 
+      // --debug ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_config.bin
       case ("--debug") :: dictBin :: matrixBin :: configBin :: posConfigBin :: xs => {
         debug(dictBin, matrixBin, configBin, posConfigBin);
       }
@@ -73,10 +75,10 @@ object Main {
   }
 
   def debug(dictBin: String, matrixBin: String, configBin: String, posConfigBin: String): Unit = {
-    var prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
-    var matrix     = Util.deserialize[Matrix](matrixBin);
-    var charType   = Util.deserialize[CharType](configBin);
-    var posConfig  = Util.deserialize[PosConfig](posConfigBin);
+    var prefixtree = Util.builtinDeserialize[PrefixTree[Array[Array[Int]]]](dictBin);
+    var matrix     = Util.kryoDeserialize[Matrix](matrixBin);
+    var charType   = Util.kryoDeserialize[CharType](configBin);
+    var posConfig  = Util.kryoDeserialize[PosConfig](posConfigBin);
     def go(): Unit = {
       print("command : ");
       readLine.split(" ").toList match {
@@ -87,16 +89,16 @@ object Main {
           posConfig  = new PosConfig(Array[String](), Array[String](), Array[String]());
         }
         case "serialize" :: dictBin :: matrixBin :: configBin :: posConfigBin :: xs => {
-          Util.serialize[PrefixTree[Array[Array[Int]]]](prefixtree, dictBin);
-          Util.serialize[Matrix](matrix, matrixBin);
-          Util.serialize[CharType](charType, configBin);
-          Util.serialize[PosConfig](posConfig, posConfigBin);
+          Util.builtinSerialize[PrefixTree[Array[Array[Int]]]](prefixtree, dictBin);
+          Util.kryoSerialize[Matrix](matrix, matrixBin);
+          Util.kryoSerialize[CharType](charType, configBin);
+          Util.kryoSerialize[PosConfig](posConfig, posConfigBin);
         }
         case "deserialize" :: dictBin :: matrixBin :: configBin :: xs => {
-          prefixtree = Util.deserialize[PrefixTree[Array[Array[Int]]]](dictBin);
-          matrix     = Util.deserialize[Matrix](matrixBin);
-          charType   = Util.deserialize[CharType](configBin);
-          posConfig  = Util.deserialize[PosConfig](posConfigBin);
+          prefixtree = Util.builtinDeserialize[PrefixTree[Array[Array[Int]]]](dictBin);
+          matrix     = Util.kryoDeserialize[Matrix](matrixBin);
+          charType   = Util.kryoDeserialize[CharType](configBin);
+          posConfig  = Util.kryoDeserialize[PosConfig](posConfigBin);
         }
         case "cost" :: l :: r :: xs => {
           try {

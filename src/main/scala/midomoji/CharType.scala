@@ -2,11 +2,17 @@ package com.github.ng3rdstmadgke.midomoji
 
 import scala.io.Source;
 
-case class Token(leftId: Int, rightId: Int, cost: Int, pos: Int) extends Serializable ;
-case class TokenConfig(charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Token]) extends Serializable;
+case class Token(leftId: Int, rightId: Int, cost: Int, pos: Int) extends Serializable {
+  def this() = this(-1, -1, -1, -1);
+}
+case class TokenConfig(charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Token]) extends Serializable {
+  def this() = this("", false, false, 0, Array[Token]());
+}
 
 class CharType(val charTypeMap: Array[Array[Int]], val tokenConfigSet: Array[TokenConfig]) extends Serializable {
   val charTypeNum = tokenConfigSet.length;
+
+  def this() = this(Array[Array[Int]](), Array[TokenConfig]());
 
   def getTokenConfigs(char: Char): Array[(Int, TokenConfig)] = {
     charTypeMap(char.toInt).map(charType => (charType, tokenConfigSet(charType)));
