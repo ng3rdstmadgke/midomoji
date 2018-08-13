@@ -230,13 +230,14 @@ object PrefixTree {
    * @param parse 辞書ファイルの行を行をパースして、トライ木に登録するオブジェクトに変換する関数
    * @param add PrefixTree#addで利用する関数
    */
-  def build[A](morphemePath: String)(parse: Array[String] => A)(add: (List[A], A) => List[A])(implicit m: ClassTag[A]): PrefixTree[Array[A]] = {
+  def build[A](morphemePath: String)(parse: (Array[String], Int) => A)(add: (List[A], A) => List[A])(implicit m: ClassTag[A]): PrefixTree[Array[A]] = {
     Using[Source, PrefixTree[Array[A]]](Source.fromFile(morphemePath)) { s =>
       val pt = PrefixTree[List[A]](700000);
-      s.getLines.foreach { line =>
+      s.getLines.zipWithIndex.foreach { lineWithId =>
+        val (line, id) = lineWithId;
         val arr = line.split("\t");
         val surface = arr.head;
-        val elem = parse(arr);
+        val elem = parse(arr, id);
         pt.add[A](surface, elem)(add);
       }
       pt.convertDataType[Array[A]] { data =>
@@ -256,13 +257,14 @@ object PrefixTree {
    * @param parse 辞書ファイルの行を行をパースして、トライ木に登録してあるオブジェクトに変換する関数
    * @param exists トライ木の検索結果の中に、parseで生成したオブジェクトが含まれているかチェックする関数(含んでいればtrue)
    */
-  def check[A](prefixree: PrefixTree[Array[A]], morphemePath: String)(parse: Array[String] => A)(exists: (A, Array[A]) => Boolean): Unit = {
+  def check[A](prefixree: PrefixTree[Array[A]], morphemePath: String)(parse: (Array[String], Int) => A)(exists: (A, Array[A]) => Boolean): Unit = {
     var errors = Using[Source, List[String]](Source.fromFile(morphemePath)) { s =>
-      s.getLines.foldLeft(List[String]()) { (es, line) =>
+      s.getLines.zipWithIndex.foldLeft(List[String]()) { (es, lineWithId) =>
+        val (line, id) = lineWithId;
         val msg = "input : " + line + "\noutput : ";
         val arr = line.split("\t");
         val surface = arr.head;
-        val elem = parse(arr);
+        val elem = parse(arr, id);
         prefixree.find(surface) match {
           case None     => msg + "None" :: es;
           case Some(ds) => if (exists(elem, ds)) es  else msg + ds.length :: es;

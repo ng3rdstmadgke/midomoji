@@ -19,7 +19,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
             val tokenConfig = charType.getTokenConfig(charTypeId);
             if (tokenConfig.forceUnigram || prefixtree.find(char) == None) {
               lattice(currIdx + 1) = tokenConfig.tokens.foldLeft(lattice(currIdx + 1)) { (nodes, token) =>
-                LatticeNode(str, token.leftId, token.rightId, token.cost, token.pos, -1, -1, prevIdx) :: nodes;
+                LatticeNode(str, token.leftId, token.rightId, token.cost, token.pos, prevIdx) :: nodes;
               };
             }
             go(currIdx + 2);
@@ -37,7 +37,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
             // unigramトークン生成
             if (tokenConfig.forceUnigram || prefixtree.find(char) == None) {
               lattice(currIdx) = tokenConfig.tokens.foldLeft(lattice(currIdx)) { (nodes, token) =>
-                LatticeNode(str, token.leftId, token.rightId, token.cost, token.pos, -1, -1, prevIdx) :: nodes;
+                LatticeNode(str, token.leftId, token.rightId, token.cost, token.pos, prevIdx) :: nodes;
               };
             }
             // ngramトークン生成
@@ -52,7 +52,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
                   ngram += nextChar;
                   lattice(nextIdx) = tokenConfig.tokens.foldLeft(lattice(nextIdx)) { (nodes, token) =>
                     val cost    = if (ngram.length > 3) token.cost * (100 + 10 * ngram.length) / 100 else token.cost;
-                    LatticeNode(ngram, token.leftId, token.rightId, cost, token.pos, -1, -1, prevIdx) :: nodes;
+                    LatticeNode(ngram, token.leftId, token.rightId, cost, token.pos, prevIdx) :: nodes;
                   };
                   false;
                 } else {
@@ -74,7 +74,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
                   lattice(groupToken.endIdx) = groupToken.tokenConfig.tokens.foldLeft(lattice(groupToken.endIdx)) { (nodes, token) =>
                     val surface = groupToken.surface.toString;
                     val cost    = if (surface.length > 3) token.cost * (100 + 10 * surface.length) / 100 else token.cost;
-                    LatticeNode(surface, token.leftId, token.rightId, cost, token.pos, -1, -1, groupToken.startIdx - 1) :: nodes;
+                    LatticeNode(surface, token.leftId, token.rightId, cost, token.pos, groupToken.startIdx - 1) :: nodes;
                   };
                   groupToken.init(currIdx, char);
                 } else {
@@ -95,7 +95,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
         lattice(groupToken.endIdx) = groupToken.tokenConfig.tokens.foldLeft(lattice(groupToken.endIdx)) { (nodes, token) =>
           val surface = groupToken.surface.toString;
           val cost    = if (surface.length > 3) token.cost * (100 + 10 * surface.length) / 100 else token.cost;
-          LatticeNode(surface, token.leftId, token.rightId, cost, token.pos, -1, -1, groupToken.startIdx - 1) :: nodes;
+          LatticeNode(surface, token.leftId, token.rightId, cost, token.pos, groupToken.startIdx - 1) :: nodes;
         };
       }
     }
