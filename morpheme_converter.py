@@ -4,8 +4,6 @@ import sys
 args = sys.argv
 mode     = args[1]
 pos_path = args[2]
-kg_path  = args[3]
-kk_path  = args[4]
 
 def create_map(path):
   cnt = 0
@@ -23,22 +21,19 @@ def parse_morpheme(terms):
   if len(terms) != 13:
     return None
   front = "\t".join(terms[0:4])
-  pos   = pos_map["\t".join(terms[4:8])]
-  kg    = kg_map[terms[8]]
-  kk    = kk_map[terms[9]]
+  pos   = pos_map["\t".join(terms[4:10])]
   back  = "\t".join(terms[10: 13])
-  return "{}\t{}\t{}\t{}\t{}".format(front, pos, kg, kk, back)
+  return "{}\t{}\t{}".format(front, pos, back)
 
 def parse_unk(terms):
-  if len(terms) != 5:
+  if len(terms) != 10:
     return None
-  terms[4]   = str(pos_map[terms[4].replace(",", "\t")])
-  return "\t".join(terms)
+  front = "\t".join(terms[0:4])
+  pos   = pos_map["\t".join(terms[4:10])]
+  return "{}\t{}".format(front, pos)
 
 
 pos_map = create_map(pos_path)
-kg_map  = create_map(kg_path)
-kk_map  = create_map(kk_path)
 
 if mode == "unk":
   processor = parse_unk
