@@ -278,7 +278,8 @@ object PrefixTree {
   }
 }
 
-class PrefixSearchIterator[A](key: String, size: Int,  base: Array[Int], check: Array[Int], data: Array[A]) extends AbstractIterator[(String, A)] {
+class PrefixSearchIterator[A](private[this] val key: String      , private[this] val size: Int     , private[this] val base: Array[Int],
+                              private[this] val check: Array[Int], private[this] val data: Array[A]) extends AbstractIterator[(String, A)] {
   var currIdx = 1;
   var keyIdx = 0;
   val keyLen = key.length;

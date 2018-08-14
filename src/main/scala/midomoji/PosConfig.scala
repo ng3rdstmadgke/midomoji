@@ -2,7 +2,7 @@ package com.github.ng3rdstmadgke.midomoji
 
 import scala.io.Source;
 
-class PosInfo(val pos: Array[String]) extends Serializable {
+class PosInfo(private[this] val pos: Array[String]) extends Serializable {
   def this() = this(Array[String]());
   def getPos(id: Int): String = if (id > 0 && id < pos.length) pos(id) else "UNKNOWN\t*\t*\t*\t*\t*";
 }

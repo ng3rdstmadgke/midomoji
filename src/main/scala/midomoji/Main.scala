@@ -93,10 +93,10 @@ object Main {
     def _analyze(text: String): Unit = {
       val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
       val viterbi = Viterbi(prefixtree, matrix, charType);
-      viterbi.analize(normalized) match {
+      viterbi.analyze(normalized) match {
         case None => System.err.println("ノードが途中で途切れました");
-        case Some((list, cost)) => {
-          println(list.reverse.map(_.toDebugString(posInfo)).mkString("\n"));
+        case Some(node) => {
+          node.foreach(n => println(n));
         }
       }
     }
@@ -171,18 +171,17 @@ object Main {
           println("0 : BOS");
           (1 to len).foreach { i =>
             println("%d : ".format(i));
-            println(lattice(i).map("  " + _.toDebugString(posInfo)).mkString("\n"));
+            lattice(i).foreach(println(_));
           }
           println("%d : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
           val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
           val viterbi = Viterbi(prefixtree, matrix, charType);
-          viterbi.analize(normalized) match {
+          viterbi.analyze(normalized) match {
             case None => System.err.println("ノードが途中で途切れました");
-            case Some((list, cost)) => {
-              println("cost : " + cost);
-              println(list.reverse.map(_.toDebugString(posInfo)).mkString("\n"));
+            case Some(node) => {
+              node.foreach(n => println(n));
             }
           }
         }
