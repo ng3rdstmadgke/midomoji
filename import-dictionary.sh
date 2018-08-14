@@ -69,19 +69,15 @@ done
 infolog "build matrix.def"
 nkf -Luw $IPADIC_DIR/$MATRIX | tr " " "\t"  > $DICT_DIR/matrix.tsv
 infolog "normalize and sort morpheme.csv"
-ls $IPADIC_DIR/*.csv | xargs cat | nkf -Luw | tr "," "\t" | python3 $SCRIPT_DIR/normalize.py | LC_ALL=C sort -t$'\t' -k1 > $DICT_DIR/morpheme.tsv.tmp
+ls $IPADIC_DIR/*.csv | xargs cat | nkf -Luw | tr "," "\t" | python3 $SCRIPT_DIR/normalize.py | LC_ALL=C sort -t$'\t' -k1 > $DICT_DIR/raw_morpheme.tsv
 infolog "build pos.tsv"
-cat $POS_ID | nkf -Luw | awk '{print $1}' | tr "," "\t"  | LC_ALL=C sort | uniq | python3 $SCRIPT_DIR/normalize.py > $DICT_DIR/pos.tsv
-infolog "build katsuyou_gata.tsv"
-cat $DICT_DIR/morpheme.tsv.tmp | awk -F$'\t' '{print $9}' | LC_ALL=C sort | uniq > $DICT_DIR/katsuyou_gata.tsv
-infolog "build katsuyou_kei.tsv"
-cat $DICT_DIR/morpheme.tsv.tmp | awk -F$'\t' '{print $10}' | LC_ALL=C sort | uniq > $DICT_DIR/katsuyou_kei.tsv
+cat $DICT_DIR/raw_morpheme.tsv | awk -F$'\t' '{print $5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10}' | LC_ALL=C sort | uniq > $DICT_DIR/pos.tsv
 infolog "copy config"
 cat $CONFIG_DIR/$USER_POS | sed -r "s/[[:space:]]*#.*//" | grep -v "^$" >> $DICT_DIR/pos.tsv
 cat $CONFIG_DIR/$USER_CHAR | sed -r "s/[[:space:]]*#.*//" | grep -v "^$" > $DICT_DIR/char.tsv
 cat $CONFIG_DIR/$USER_CHAR_TYPE | sed -r "s/[[:space:]]*#.*//" | grep -v "^$" > $DICT_DIR/char_type.tsv
-cat $CONFIG_DIR/$USER_UNK | sed -r "s/[[:space:]]*#.*//" | grep -v "^$" | python3 $SCRIPT_DIR/morpheme_converter.py unk $DICT_DIR/pos.tsv $DICT_DIR/katsuyou_gata.tsv $DICT_DIR/katsuyou_kei.tsv | LC_ALL=C sort | uniq  > $DICT_DIR/unk.tsv
+cat $CONFIG_DIR/$USER_UNK | sed -r "s/[[:space:]]*#.*//" | grep -v "^$" | python3 $SCRIPT_DIR/morpheme_converter.py unk $DICT_DIR/pos.tsv | LC_ALL=C sort | uniq  > $DICT_DIR/unk.tsv
 infolog "build morpheme.tsv"
-cat $DICT_DIR/morpheme.tsv.tmp | python3 $SCRIPT_DIR/morpheme_converter.py morpheme $DICT_DIR/pos.tsv $DICT_DIR/katsuyou_gata.tsv $DICT_DIR/katsuyou_kei.tsv > $DICT_DIR/morpheme.tsv
-rm $DICT_DIR/morpheme.tsv.tmp
+cat $DICT_DIR/raw_morpheme.tsv | python3 $SCRIPT_DIR/morpheme_converter.py morpheme $DICT_DIR/pos.tsv > $DICT_DIR/morpheme.tsv
+rm $DICT_DIR/raw_morpheme.tsv
 infolog "Complete!!"

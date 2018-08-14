@@ -11,9 +11,9 @@ object Main {
     args.toList match {
       // --build-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
       case ("--build-dict") :: morphemePath :: dictBin :: Nil => {
-        val parse = (arr: Array[String]) => {
-          val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
-          Array(left, right, cost, pos, k1, k2).map(_.toInt);
+        val parse = (arr: Array[String], id: Int) => {
+          val Array(surface, left, right, cost, pos, base, yomi, pron) = arr;
+          Array(left.toInt, right.toInt, cost.toInt, pos.toInt, id);
         }
         val add = (existing: List[Array[Int]], elem: Array[Int]) => {
           existing match {
@@ -37,18 +37,18 @@ object Main {
         Util.kryoSerialize[CharType](charType, configBin);
       }
 
-      // --build-pos-config ./dictionary/pos.tsv ./dictionary/katsuyou_gata.tsv ./dictionary/katsuyou_kei.tsv ./dictionary/pos_config.bin
-      case ("--build-pos-config") :: posPath :: katsuyouGataPath :: katsuyouKeiPath :: posConfigBin :: Nil => {
-        val posConfig = PosConfig.build(posPath, katsuyouGataPath, katsuyouKeiPath);
-        Util.kryoSerialize[PosConfig](posConfig, posConfigBin);
+      // --build-pos-info ./dictionary/pos.tsv ./dictionary/pos_info.bin
+      case ("--build-pos-info") :: posPath :: posInfoBin :: Nil => {
+        val posInfo = PosInfo.build(posPath);
+        Util.kryoSerialize[PosInfo](posInfo, posInfoBin);
       }
 
       // --check-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
       case ("--check-dict") :: morphemePath :: dictBin :: Nil => {
         var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
-        val parse = (arr: Array[String]) => {
-          val Array(surface, left, right, cost, pos, k1, k2, base, yomi, pron) = arr;
-          Array(left, right, cost, pos, k1, k2).map(_.toInt);
+        val parse = (arr: Array[String], id: Int) => {
+          val Array(surface, left, right, cost, pos, base, yomi, pron) = arr;
+          Array(left.toInt, right.toInt, cost.toInt, pos.toInt, id);
         }
         val exists = (elem: Array[Int], es: Array[Array[Int]]) => es.exists(e => elem.sameElements(e));
         PrefixTree.check[Array[Int]](prefixtree, morphemePath)(parse)(exists);
@@ -60,19 +60,19 @@ object Main {
         Matrix.check(matrix, matrixPath);
       }
 
-      // --debug ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_config.bin
-      case ("--debug") :: dictBin :: matrixBin :: configBin :: posConfigBin :: Nil => {
-        debug(dictBin, matrixBin, configBin, posConfigBin);
+      // --debug ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin
+      case ("--debug") :: dictBin :: matrixBin :: configBin :: posInfoBin :: Nil => {
+        debug(dictBin, matrixBin, configBin, posInfoBin);
       }
 
-      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_config.bin
-      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posConfigBin :: Nil => {
-        analyze(dictBin, matrixBin, configBin, posConfigBin);
+      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin
+      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posInfoBin :: Nil => {
+        analyze(dictBin, matrixBin, configBin, posInfoBin);
       }
 
-      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_config.bin
-      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posConfigBin :: targetPath :: Nil => {
-        analyze(dictBin, matrixBin, configBin, posConfigBin, targetPath);
+      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin
+      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posInfoBin :: targetPath :: Nil => {
+        analyze(dictBin, matrixBin, configBin, posInfoBin, targetPath);
       }
 
       case _ => {
@@ -85,18 +85,18 @@ object Main {
     }
   }
 
-  def analyze(dictBin: String, matrixBin: String, configBin: String, posConfigBin: String, targetPath: String = null): Unit = {
+  def analyze(dictBin: String, matrixBin: String, configBin: String, posInfoBin: String, targetPath: String = null): Unit = {
     var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
     var matrix     = Util.kryoDeserialize[Matrix](matrixBin);
     var charType   = Util.kryoDeserialize[CharType](configBin);
-    var posConfig  = Util.kryoDeserialize[PosConfig](posConfigBin);
+    var posInfo  = Util.kryoDeserialize[PosInfo](posInfoBin);
     def _analyze(text: String): Unit = {
       val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
       val viterbi = Viterbi(prefixtree, matrix, charType);
-      viterbi.analize(normalized) match {
+      viterbi.analyze(normalized) match {
         case None => System.err.println("ノードが途中で途切れました");
-        case Some((list, cost)) => {
-          println(list.reverse.map(_.toDebugString(posConfig)).mkString("\n"));
+        case Some(node) => {
+          node.foreach(n => println(n));
         }
       }
     }
@@ -113,11 +113,11 @@ object Main {
     }
   }
 
-  def debug(dictBin: String, matrixBin: String, configBin: String, posConfigBin: String): Unit = {
+  def debug(dictBin: String, matrixBin: String, configBin: String, posInfoBin: String): Unit = {
     var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
     var matrix     = Util.kryoDeserialize[Matrix](matrixBin);
     var charType   = Util.kryoDeserialize[CharType](configBin);
-    var posConfig  = Util.kryoDeserialize[PosConfig](posConfigBin);
+    var posInfo  = Util.kryoDeserialize[PosInfo](posInfoBin);
     def go(): Unit = {
       print("command : ");
       readLine.split(" ").toList match {
@@ -125,19 +125,19 @@ object Main {
           prefixtree = PrefixTree[Array[Array[Int]]](5);
           matrix     = Matrix(1316, 1316);
           charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
-          posConfig  = new PosConfig(Array[String](), Array[String](), Array[String]());
+          posInfo  = new PosInfo(Array[String]());
         }
         case "serialize" :: xs => {
           PrefixTreeSerializeObject.serialize[Array[Array[Int]]](prefixtree, dictBin);
           Util.kryoSerialize[Matrix](matrix, matrixBin);
           Util.kryoSerialize[CharType](charType, configBin);
-          Util.kryoSerialize[PosConfig](posConfig, posConfigBin);
+          Util.kryoSerialize[PosInfo](posInfo, posInfoBin);
         }
         case "deserialize" :: xs => {
           prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
           matrix     = Util.kryoDeserialize[Matrix](matrixBin);
           charType   = Util.kryoDeserialize[CharType](configBin);
-          posConfig  = Util.kryoDeserialize[PosConfig](posConfigBin);
+          posInfo  = Util.kryoDeserialize[PosInfo](posInfoBin);
         }
         case "cost" :: l :: r :: xs => {
           try {
@@ -171,18 +171,17 @@ object Main {
           println("0 : BOS");
           (1 to len).foreach { i =>
             println("%d : ".format(i));
-            println(lattice(i).map("  " + _.toDebugString(posConfig)).mkString("\n"));
+            lattice(i).foreach(println(_));
           }
           println("%d : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
           val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
           val viterbi = Viterbi(prefixtree, matrix, charType);
-          viterbi.analize(normalized) match {
+          viterbi.analyze(normalized) match {
             case None => System.err.println("ノードが途中で途切れました");
-            case Some((list, cost)) => {
-              println("cost : " + cost);
-              println(list.reverse.map(_.toDebugString(posConfig)).mkString("\n"));
+            case Some(node) => {
+              node.foreach(n => println(n));
             }
           }
         }

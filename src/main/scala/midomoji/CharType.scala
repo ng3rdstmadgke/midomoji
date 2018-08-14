@@ -2,28 +2,55 @@ package com.github.ng3rdstmadgke.midomoji
 
 import scala.io.Source;
 
-case class Token(leftId: Int, rightId: Int, cost: Int, pos: Int) extends Serializable {
+case class Token(leftId: Int, rightId: Int, genCost: Int, posId: Int) extends Serializable {
   def this() = this(-1, -1, -1, -1);
 }
+
+/**
+ * charに対応する文字種IDとトークン生成設定を返す。
+ * 
+ * @param charTypeName 文字種の名称。KATAKANAとかKANJIとか
+ * @param forceUnigram prefixtreeに単語が存在する場合にユニグラムを生成するか(trueなら生成する)。
+ * @param groupToken 連続する同一文字種をまとめたトークンを生成するか(trueなら生成する)。
+ * @param ngram 何グラムまで生成するか(バイグラムなら2、トリグラムなら3を指定する)。
+ * @param tokens 生成するトークンの雛形の配列。
+ */
 case class TokenConfig(charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Token]) extends Serializable {
   def this() = this("", false, false, 0, Array[Token]());
 }
 
-class CharType(val charTypeMap: Array[Array[Int]], val tokenConfigSet: Array[TokenConfig]) extends Serializable {
+class CharType(private[this] val charTypeMap: Array[Array[Int]], private[this] val tokenConfigSet: Array[TokenConfig]) extends Serializable {
   val charTypeNum = tokenConfigSet.length;
 
   def this() = this(Array[Array[Int]](), Array[TokenConfig]());
 
+  /**
+   * charに対応する文字種IDとトークン生成設定を返す。
+   * 一つの文字に対して複数個の設定がある場合がある。
+   * 例えば「ー」はHIRAGANAとKATAKANA2つの文字種として扱われる。
+   */
   def getTokenConfigs(char: Char): Array[(Int, TokenConfig)] = {
     charTypeMap(char.toInt).map(charType => (charType, tokenConfigSet(charType)));
   }
 
+  /**
+   * 文字種IDに対応するトークン生成設定を返す。
+   */
   def getTokenConfig(charType: Int): TokenConfig = {
     tokenConfigSet(charType);
   }
 
+  /**
+   * charに対応する文字種IDの配列を返す。
+   * 一つの文字に対して複数個のIDがある場合がある。
+   * 例えば「ー」はHIRAGANAとKATAKANA2つの文字種として扱われる。
+   */
   def getCharTypeIds(char: Char): Array[Int] = {
     charTypeMap(char.toInt);
+  }
+
+  def typeIs(char: Char, charType: Int): Boolean = {
+    charTypeMap(char.toInt).exists(_ == charType);
   }
 }
 

@@ -9,7 +9,7 @@ cat >&2 <<EOF
 #   MODE build-dict        辞書のビルド
 #        build-matrix      連接コスト表のビルド
 #        build-config      設定ファイルのビルド
-#        build-pos-config  品詞設定ファイルのビルド
+#        build-pos-info  品詞設定ファイルのビルド
 #        check-dict        辞書のチェックを行う
 #        check-matrix      連接コスト表のチェックを行う
 #        debug             デバッグコンソール起動
@@ -49,7 +49,7 @@ MATRIX=$DICT_DIR/matrix.tsv
 DICT_BIN=$DICT_DIR/dict.bin
 MATRIX_BIN=$DICT_DIR/matrix.bin
 CONFIG_BIN=$DICT_DIR/config.bin
-POS_CONFIG_BIN=$DICT_DIR/pos_config.bin
+POS_INFO_BIN=$DICT_DIR/pos_info.bin
 ANALYZE_TARGET_FILE=
 MODE=
 while [ "$#" != 0 ]; do
@@ -82,12 +82,10 @@ elif [ "$MODE" = "build-config" ]; then
   UNK=$DICT_DIR/unk.tsv
   file_exists $CHAR $CHAR_TYPE $UNK
   java -jar $JAR_FILE --build-config $CHAR $CHAR_TYPE $UNK $CONFIG_BIN
-elif [ "$MODE" = "build-pos-config" ]; then
+elif [ "$MODE" = "build-pos-info" ]; then
   POS=$DICT_DIR/pos.tsv
-  KATSUYOU_GATA=$DICT_DIR/katsuyou_gata.tsv
-  KATSUYOU_KEI=$DICT_DIR/katsuyou_kei.tsv
-  file_exists $POS $KATSUYOU_GATA $KATSUYOU_KEI
-  java -jar $JAR_FILE --build-pos-config $POS $KATSUYOU_GATA $KATSUYOU_KEI $POS_CONFIG_BIN
+  file_exists $POS
+  java -jar $JAR_FILE --build-pos-info $POS $POS_INFO_BIN
 elif [ "$MODE" = "check-dict" ]; then
   file_exists $MORPHEME
   java -jar $JAR_FILE --check-dict $MORPHEME $DICT_BIN
@@ -95,9 +93,9 @@ elif [ "$MODE" = "check-matrix" ]; then
   file_exists $MATRIX
   java -jar $JAR_FILE --check-matrix $MATRIX $MATRIX_BIN
 elif [ "$MODE" = "debug" ]; then
-  java -jar $JAR_FILE --debug $DICT_BIN $MATRIX_BIN $CONFIG_BIN $POS_CONFIG_BIN
+  java -jar $JAR_FILE --debug $DICT_BIN $MATRIX_BIN $CONFIG_BIN $POS_INFO_BIN
 elif [ "$MODE" = "analyze" ]; then
-  java -jar $JAR_FILE --analyze $DICT_BIN $MATRIX_BIN $CONFIG_BIN $POS_CONFIG_BIN $ANALYZE_TARGET_FILE
+  java -jar $JAR_FILE --analyze $DICT_BIN $MATRIX_BIN $CONFIG_BIN $POS_INFO_BIN $ANALYZE_TARGET_FILE
 else
   usage
 fi
