@@ -2,10 +2,6 @@ package com.github.ng3rdstmadgke.midomoji
 
 import scala.io.Source;
 
-case class Token(leftId: Int, rightId: Int, genCost: Int, posId: Int) extends Serializable {
-  def this() = this(-1, -1, -1, -1);
-}
-
 /**
  * charに対応する文字種IDとトークン生成設定を返す。
  * 
@@ -13,10 +9,10 @@ case class Token(leftId: Int, rightId: Int, genCost: Int, posId: Int) extends Se
  * @param forceUnigram prefixtreeに単語が存在する場合にユニグラムを生成するか(trueなら生成する)。
  * @param groupToken 連続する同一文字種をまとめたトークンを生成するか(trueなら生成する)。
  * @param ngram 何グラムまで生成するか(バイグラムなら2、トリグラムなら3を指定する)。
- * @param tokens 生成するトークンの雛形の配列。
+ * @param tokens 生成するトークンの雛形の配列。Array(leftId, rightId, genCost, posId, id)
  */
-case class TokenConfig(charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Token]) extends Serializable {
-  def this() = this("", false, false, 0, Array[Token]());
+case class TokenConfig(charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Array[Int]]) extends Serializable {
+  def this() = this("", false, false, 0, Array[Array[Int]]());
 }
 
 class CharType(private[this] val charTypeMap: Array[Array[Int]], private[this] val tokenConfigSet: Array[TokenConfig]) extends Serializable {
@@ -76,10 +72,10 @@ object CharType {
       };
     }
     // unk.def
-    val unkArr = Using[Source, Array[(String, Token)]](Source.fromFile(unkPath)) { s =>
+    val unkArr = Using[Source, Array[(String, Array[Int])]](Source.fromFile(unkPath)) { s =>
       s.getLines.toArray.map{ line =>
         val arr = line.split("\t").map(_.trim);
-        (arr(0), Token(arr(1).toInt, arr(2).toInt, arr(3).toInt, arr(4).toInt));
+        (arr(0), Array(arr(1).toInt, arr(2).toInt, arr(3).toInt, arr(4).toInt, -1));
       };
     };
     // 文字種名とIDのマップ
@@ -87,7 +83,7 @@ object CharType {
     // 文字種の数
     val charTypeNum = charArr.length;
     // 同一文字種のトークンをまとめる
-    val tokens = Array.fill[List[Token]](charTypeNum)(Nil);
+    val tokens = Array.fill[List[Array[Int]]](charTypeNum)(Nil);
     unkArr.foreach { e =>
       val (charType, token) = e;
       charMap.get(charType) match {
