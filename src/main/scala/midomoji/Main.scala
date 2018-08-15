@@ -90,13 +90,14 @@ object Main {
     var matrix     = Util.kryoDeserialize[Matrix](matrixBin);
     var charType   = Util.kryoDeserialize[CharType](configBin);
     var posInfo  = Util.kryoDeserialize[PosInfo](posInfoBin);
-    def _analyze(text: String): Unit = {
+    def _analyze(text: String): String = {
       val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
       val viterbi = Viterbi(prefixtree, matrix, charType);
       viterbi.analyze(normalized) match {
-        case None => System.err.println("ノードが途中で途切れました");
-        case Some(node) => {
-          node.foreach(n => println(n));
+        case Some(node) => node.mkString("\n");
+        case None => {
+          System.err.println("ノードが途中で途切れました");
+          "";
         }
       }
     }
@@ -108,7 +109,15 @@ object Main {
       }
     } else {
       Using[Source, Unit](Source.fromFile(targetPath)) { s =>
-        s.getLines.foreach(_analyze(_));
+        val sb = new StringBuilder(300000);
+        s.getLines.foreach { line =>
+          if (sb.length() > 300000) {
+            println(sb);
+            sb.setLength(0);
+          }
+          sb.append(_analyze(line));
+        }
+        println(sb);
       }
     }
   }
@@ -181,7 +190,7 @@ object Main {
           viterbi.analyze(normalized) match {
             case None => System.err.println("ノードが途中で途切れました");
             case Some(node) => {
-              node.foreach(n => println(n));
+              println(node.mkString("\n"));
             }
           }
         }
@@ -204,8 +213,6 @@ object Main {
         }
         case "status" :: xs => {
           if (prefixtree != null && matrix != null) {
-            println("----- matrix -----");
-            println("leftSize=%d, rightSize=%d".format(matrix.leftSize, matrix.rightSize));
             println("----- prefixtree -----");
             println("size=%d".format(prefixtree.size));
           } else {
