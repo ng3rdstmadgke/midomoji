@@ -5,15 +5,15 @@ import scala.io.Source;
 /**
  * 連接コスト表
  */
-class Matrix(val leftSize: Int, val rightSize: Int) extends Serializable {
-  private[this] val matrix = Array.ofDim[Int](leftSize, rightSize);
+class Matrix(private[this] val leftSize: Int, private[this] val rightSize: Int) extends Serializable {
+  private[this] val matrix = new Array[Int](leftSize * rightSize);
   private[this] val maxCost = 100000;
 
   def this() = this(0, 0);
 
-  def getCost(left: Int, right: Int): Int = try { matrix(left)(right); } catch { case e:ArrayIndexOutOfBoundsException => maxCost; }
+  def getCost(left: Int, right: Int): Int = try { matrix(left * leftSize + right); } catch { case e:ArrayIndexOutOfBoundsException => maxCost; }
 
-  def setCost(left: Int, right: Int, cost: Int): Unit = matrix(left)(right) = cost;
+  def setCost(left: Int, right: Int, cost: Int): Unit = matrix(left * leftSize + right) = cost;
 }
 
 object Matrix {
