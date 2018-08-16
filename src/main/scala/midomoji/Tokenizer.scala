@@ -4,7 +4,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
   def tokenize(text: String, lattice: Array[List[LatticeNode]]): Array[List[LatticeNode]] = {
     val len = text.length;
     val groupTokens = (0 until charType.charTypeNum).toArray.map{ i =>
-      new GroupToken(0, 0, new StringBuilder(), charType.getTokenConfig(i));
+      new GroupToken(-1, -1, new StringBuilder(), charType.getTokenConfig(i));
     };
     def go(i: Int): Unit = {
       if (i < len) {
@@ -117,7 +117,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
 }
 
 class GroupToken(var startIdx: Int, var endIdx: Int, var surface: StringBuilder, val tokenConfig: TokenConfig) {
-  def isEmpty: Boolean = startIdx == 0 && endIdx == 0;
+  def isEmpty: Boolean = startIdx == -1 && endIdx == -1;
   def isNext(idx: Int): Boolean = endIdx + 1 == idx;
   def shouldCreateToken: Boolean = {
     val len = surface.length;
