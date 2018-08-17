@@ -8,7 +8,8 @@ class PrefixTreeSerializeObject[A](var size: Int, var base: Array[Int], var chec
 
 object PrefixTreeSerializeObject {
   def serialize[A](prefixtree: PrefixTree[A], path: String): Unit = {
-    val obj = new PrefixTreeSerializeObject[A](prefixtree.size, prefixtree.base, prefixtree.check, prefixtree.data);
+    val (size, base, check, data) = prefixtree.getFields;
+    val obj = new PrefixTreeSerializeObject[A](size, base, check, data);
     Util.kryoSerialize[PrefixTreeSerializeObject[A]](obj, path);
   }
 

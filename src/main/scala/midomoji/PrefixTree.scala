@@ -4,8 +4,10 @@ import scala.reflect.ClassTag;
 import scala.collection.AbstractIterator;
 import scala.io.Source;
 
-class PrefixTree[A](var size: Int, var base: Array[Int], var check: Array[Int], var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
+class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[Int], private[this] var check: Array[Int], private[this] var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
   private var none: A = _; // A型のnull値
+
+  def getFields: (Int, Array[Int], Array[Int], Array[A]) = (size, base, check, data);
 
   /**
    * data を C 型に変更して新しいPrefixTreeオブジェクトを作る
@@ -87,7 +89,8 @@ class PrefixTree[A](var size: Int, var base: Array[Int], var check: Array[Int], 
           }
 
         // 2. 遷移先ノードと currChar が遷移可能なbaseを求める
-        base(currIdx) = findNewBase((-1, currChar) :: nextNodes);
+        val newBase = findNewBase((-1, currChar) :: nextNodes, key);
+        base(currIdx) = newBase;
 
         nextNodes.foreach { e =>
           val srcIdx  = e._1;
@@ -129,7 +132,7 @@ class PrefixTree[A](var size: Int, var base: Array[Int], var check: Array[Int], 
    * @param nextNodes 遷移先ノードの配列 (index, charCode)
    * @return すべての遷移先ノードを配置可能な base
    */
-  private def findNewBase(nextNodes: List[(Int, Int)]): Int = {
+  private def findNewBase(nextNodes: List[(Int, Int)], key: String): Int = {
     def go(b: Int, ns: List[(Int, Int)]): Int = {
       ns match {
         case Nil => b;
@@ -157,18 +160,19 @@ class PrefixTree[A](var size: Int, var base: Array[Int], var check: Array[Int], 
    *
    * @param newSizeBase 拡張後のサイズの基準値
    */
-   private def extendsArray(newSizeBase: Int): Unit = {
-     size = Math.floor(newSizeBase * 1.25).toInt;
-     val tmpBase  = new Array[Int](size);
-     val tmpCheck = new Array[Int](size);
-     val tmpData  = m.newArray(size);
-     base.copyToArray(tmpBase);
-     check.copyToArray(tmpCheck);
-     data.copyToArray(tmpData);
-     base  = tmpBase;
-     check = tmpCheck;
-     data  = tmpData;
-   }
+  private def extendsArray(newSizeBase: Int): Unit = {
+    val oldsize = size;
+    size = Math.floor(newSizeBase * 1.25).toInt;
+    val tmpBase  = new Array[Int](size);
+    val tmpCheck = new Array[Int](size);
+    val tmpData  = m.newArray(size);
+    base.copyToArray(tmpBase);
+    check.copyToArray(tmpCheck);
+    data.copyToArray(tmpData);
+    base  = tmpBase;
+    check = tmpCheck;
+    data  = tmpData;
+  }
 
   /**
    * 遷移に失敗した時点のindexと文字を返す
@@ -193,15 +197,16 @@ class PrefixTree[A](var size: Int, var base: Array[Int], var check: Array[Int], 
   /**
    * base, check, data に現在格納されている値を出力する。
    */
-  def dump: Unit = {
-    println("size = %d".format(size));
+  def dump(begin: Int = 0, end: Int = -1): Unit = {
+    val beginIdx = if (begin < 0) 0 else begin;
+    val endIdx   = if (end < 0 || end > size) size else end;
     var sepLine = "+----------+----------+----------+----------+";
     println(sepLine);
     println("|index     |base      |check     |char, data|");
     println(sepLine);
     println("|1         " + "|" + base(1).toString.padTo(10, ' ') + "|" + check(1).toString.padTo(10, ' ') + "|");
     println(sepLine);
-    val elems = (2 until size).
+    (beginIdx until endIdx).
       filter(i => check(i) != 0).
       foreach { i =>
         val d = if (data(i) != null && data(i) != Nil) data(i).toString else "";
@@ -210,6 +215,38 @@ class PrefixTree[A](var size: Int, var base: Array[Int], var check: Array[Int], 
         println("|" + i.toString.padTo(10, ' ') + "|" + base(i).toString.padTo(10, ' ') + "|" + check(i).toString.padTo(10, ' ') + "|" + char + "(" + cp + "), " + d);
         println(sepLine);
       }
+    println("size = %d".format(size));
+  }
+
+  def debugFind(key: String)(dataToString: A => String): Unit = {
+    var currIdx = 1;
+    var sepLine = "+----------+----------+----------+----------+";
+    println(sepLine);
+    println("|index     |base      |check     |char, data|");
+    println(sepLine);
+    println("|1         " + "|" + base(1).toString.padTo(10, ' ') + "|" + check(1).toString.padTo(10, ' ') + "|");
+    println(sepLine);
+    for (char <- key) {
+      val cp = char.toInt;
+      val nextIdx = base(currIdx) + cp;
+      val d = if (data(nextIdx) != null && data(nextIdx) != Nil) data(nextIdx).toString else "";
+      println("|" + nextIdx.toString.padTo(10, ' ') + "|" + base(nextIdx).toString.padTo(10, ' ') + "|" + check(nextIdx).toString.padTo(10, ' ') + "|" + char + "(" + char.toInt + "), " + d);
+      println(sepLine);
+      if (nextIdx < size && check(nextIdx) == currIdx) {
+        currIdx = nextIdx;
+      } else {
+        println(char + "(" + cp + ") : 遷移に失敗しました。");
+        return ();
+      }
+    }
+    println(key + " : " + dataToString(data(currIdx)));
+    println("遷移に成功しました。");
+    return ();
+  }
+
+  def status: Unit = {
+    println("----- prefixtree -----");
+    println("size=%d".format(this.size));
   }
 }
 
@@ -231,7 +268,7 @@ object PrefixTree {
    * @param add PrefixTree#addで利用する関数
    */
   def build[A](morphemePath: String)(parse: (Array[String], Int) => A)(add: (List[A], A) => List[A])(implicit m: ClassTag[A]): PrefixTree[Array[A]] = {
-    Using[Source, PrefixTree[Array[A]]](Source.fromFile(morphemePath)) { s =>
+    val prefixtree = Using[Source, PrefixTree[List[A]]](Source.fromFile(morphemePath)) { s =>
       val pt = PrefixTree[List[A]](700000);
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
@@ -239,12 +276,15 @@ object PrefixTree {
         val surface = arr.head;
         val elem = parse(arr, id);
         pt.add[A](surface, elem)(add);
+        if (id % 10000 == 0) println(id + " words...");
       }
-      pt.convertDataType[Array[A]] { data =>
-        data match {
-          case ls @ x :: xs => ls.toArray;
-          case _            => null;
-        }
+      pt;
+    }
+    prefixtree.convertDataType[Array[A]] { data =>
+      data match {
+        case null => null;
+        case Nil  => null;
+        case list => list.toArray;
       }
     }
   }
