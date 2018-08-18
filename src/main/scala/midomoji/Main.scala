@@ -138,6 +138,7 @@ object Main {
           posInfo  = new PosInfo(Array[String]());
         }
         case "serialize" :: xs => {
+          prefixtree.optimize;
           PrefixTreeSerializeObject.serialize[Array[Array[Int]]](prefixtree, dictBin);
           Util.kryoSerialize[Matrix](matrix, matrixBin);
           Util.kryoSerialize[CharType](charType, configBin);

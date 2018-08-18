@@ -16,8 +16,9 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
    * @return key に対応するデータ
    */
   def convertDataType[C](convert: A => C)(implicit c: ClassTag[C]): PrefixTree[C] = {
-    val currData = data;
+    optimize;
     val newData = c.newArray(size);
+    val currData = data;
     (0 until size).foreach ( i => newData(i) = convert(currData(i)));
     new PrefixTree[C](size, base, check, newData);
   }
@@ -40,6 +41,7 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
     }
     if (data(currIdx) == null) None else Some(data(currIdx));
   }
+
   /**
    * key に対応するデータを取得する。
    * 
@@ -161,8 +163,21 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
    * @param newSizeBase 拡張後のサイズの基準値
    */
   private def extendsArray(newSizeBase: Int): Unit = {
-    val oldsize = size;
-    size = Math.floor(newSizeBase * 1.25).toInt;
+    val newSize = Math.floor(newSizeBase * 1.25).toInt;
+    changeSize(newSize);
+  }
+
+  def optimize(): Unit = {
+    val lastIdx = (0 until size).reverse.find(i => check(i) != 0);
+    lastIdx match {
+      case None    => changeSize(2);
+      case Some(i) => changeSize(i + 1);
+
+    }
+  }
+
+  private def changeSize(newSize: Int): Unit = {
+    size = newSize;
     val tmpBase  = new Array[Int](size);
     val tmpCheck = new Array[Int](size);
     val tmpData  = m.newArray(size);
@@ -172,7 +187,10 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
     base  = tmpBase;
     check = tmpCheck;
     data  = tmpData;
+
+
   }
+
 
   /**
    * 遷移に失敗した時点のindexと文字を返す
