@@ -13,8 +13,7 @@ object Main {
       case ("--build-dict") :: morphemePath :: dictBin :: Nil => {
         val parse = (arr: Array[String], id: Int) => {
           val Array(surface, left, right, cost, pos, base, yomi, pron) = arr;
-          // leftId, rightId, genCost, posId, id, beginIdx, endIdx, totalCost, pointer
-          Array(left.toInt, right.toInt, cost.toInt, pos.toInt, id, -1, -1, -1, -1);
+          Array(left.toInt, right.toInt, cost.toInt, pos.toInt, id);
         }
         val add = (existing: List[Array[Int]], elem: Array[Int]) => {
           existing match {
@@ -49,7 +48,7 @@ object Main {
         var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
         val parse = (arr: Array[String], id: Int) => {
           val Array(surface, left, right, cost, pos, base, yomi, pron) = arr;
-          Array(left.toInt, right.toInt, cost.toInt, pos.toInt, id, -1, -1, -1, -1);
+          Array(left.toInt, right.toInt, cost.toInt, pos.toInt, id);
         }
         val exists = (elem: Array[Int], es: Array[Array[Int]]) => es.exists(e => elem.sameElements(e));
         PrefixTree.check[Array[Int]](prefixtree, morphemePath)(parse)(exists);

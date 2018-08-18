@@ -51,7 +51,7 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
         val (surface, tokens) = result;
         val nextLatticeIdx = latticeIdx + surface.length;
         lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-          val Array(leftId, rightId, genCost, posId, id) = token;
+          val Array(leftId, rightId, genCost, posId, id, _*) = token;
           new LatticeNode(surface, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
         }
       }

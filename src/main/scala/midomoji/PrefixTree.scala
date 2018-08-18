@@ -343,9 +343,9 @@ object PrefixTree {
 
 class PrefixSearchIterator[A](private[this] val key: String      , private[this] val size: Int     , private[this] val base: Array[Int],
                               private[this] val check: Array[Int], private[this] val data: Array[A]) extends AbstractIterator[(String, A)] {
-  var currIdx = 1;
-  var keyIdx = 0;
-  val keyLen = key.length;
+  private[this] var currIdx = 1;
+  private[this] var keyIdx = 0;
+  private[this] val keyLen = key.length;
 
   override def next(): (String, A) = (key.substring(0, keyIdx), data(currIdx));
 
