@@ -89,7 +89,7 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
           }
 
         // 2. 遷移先ノードと currChar が遷移可能なbaseを求める
-        val newBase = findNewBase((-1, currChar) :: nextNodes, key);
+        val newBase = findNewBase((-1, currChar) :: nextNodes);
         base(currIdx) = newBase;
 
         nextNodes.foreach { e =>
@@ -132,7 +132,7 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
    * @param nextNodes 遷移先ノードの配列 (index, charCode)
    * @return すべての遷移先ノードを配置可能な base
    */
-  private def findNewBase(nextNodes: List[(Int, Int)], key: String): Int = {
+  private def findNewBase(nextNodes: List[(Int, Int)]): Int = {
     def go(b: Int, ns: List[(Int, Int)]): Int = {
       ns match {
         case Nil => b;
@@ -247,6 +247,11 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
   def status: Unit = {
     println("----- prefixtree -----");
     println("size=%d".format(this.size));
+    val lastIdx = (0 until size).reverse.find(i => check(i) != 0);
+    lastIdx match {
+      case None    => println("node is not found");
+      case Some(i) => println("last node : index=%d, base=%d, check=%d, data=%s".format(i, base(i), check(i), data(i)));
+    }
   }
 }
 

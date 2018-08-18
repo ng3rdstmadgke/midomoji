@@ -9,9 +9,10 @@ cat >&2 <<EOF
 #   MODE build-dict        辞書のビルド
 #        build-matrix      連接コスト表のビルド
 #        build-config      設定ファイルのビルド
-#        build-pos-info  品詞設定ファイルのビルド
+#        build-pos-info    品詞設定ファイルのビルド
 #        check-dict        辞書のチェックを行う
 #        check-matrix      連接コスト表のチェックを行う
+#        sort-morpheme     辞書の元ファイルをソートする
 #        debug             デバッグコンソール起動
 #        analyze           形態素解析
 #
@@ -92,6 +93,9 @@ elif [ "$MODE" = "check-dict" ]; then
 elif [ "$MODE" = "check-matrix" ]; then
   file_exists $MATRIX
   java -jar $JAR_FILE --check-matrix $MATRIX $MATRIX_BIN
+elif [ "$MODE" = "sort-morpheme" ]; then
+  file_exists $MATRIX
+  java -jar $JAR_FILE --sort-morpheme
 elif [ "$MODE" = "debug" ]; then
   java -jar $JAR_FILE --debug $DICT_BIN $MATRIX_BIN $CONFIG_BIN $POS_INFO_BIN
 elif [ "$MODE" = "analyze" ]; then
