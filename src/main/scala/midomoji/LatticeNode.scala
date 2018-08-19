@@ -3,9 +3,10 @@ package com.github.ng3rdstmadgke.midomoji;
 import scala.collection.Iterable;
 import scala.collection.AbstractIterator;
 
-class LatticeNode(val surface: String, val leftId: Int, val rightId: Int,
-                  val genCost: Int   , val posId: Int , val id: Int     , val nextIdx: Int,
-                  var totalCost: Int = 0, var nextNode: LatticeNode = null) extends Iterable[LatticeNode] {
+class LatticeNode(val surface: String, val leftId: Int , val rightId: Int,
+                  val genCost: Int   , val posId: Int  , val id: Int,
+                  val prevIdx: Int   , val nextIdx: Int, var totalCost: Int = 0,
+                  var nextNode: LatticeNode = null) extends Iterable[LatticeNode] {
   override def iterator: Iterator[LatticeNode] = new LatticeNodeIterator(this);
 
   override def toString(): String = {

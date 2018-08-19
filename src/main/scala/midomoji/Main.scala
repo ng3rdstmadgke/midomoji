@@ -172,6 +172,7 @@ object Main {
             }
           }
         }
+        /*
         case "tokenize" :: text :: xs => {
           val len = text.length;
           val tokenizer = new Tokenizer[Array[Array[Int]]](charType, prefixtree);
@@ -183,6 +184,7 @@ object Main {
           }
           println("%d : EOS".format(len + 1));
         }
+        */
         case "analyze" :: text :: xs => {
           val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
           val viterbi = Viterbi(prefixtree, matrix, charType);
