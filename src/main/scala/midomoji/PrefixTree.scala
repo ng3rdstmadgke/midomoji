@@ -43,19 +43,38 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
   }
 
   /**
-   * key に対応するデータを取得する。
+   * charがトライ木に登録されているかどうかを確かめる
    * 
-   * @param char 取得するデータのキー
-   * @return key に対応するデータ
+   * @param char 
+   * @return 登録されていればtrue, そうでなければfalse
    */
-  def find(char: Char): Option[A] = {
+  def exists(char: Char): Boolean = {
     val currIdx = 1;
     val nextIdx = base(currIdx) + char.toInt;
     if (nextIdx < size && check(nextIdx) == currIdx && data(nextIdx) != null) {
-      Some(data(nextIdx));
+      true;
     } else {
-      None;
+      false;
     }
+  }
+
+  /**
+   * keyがトライ木に登録されているかどうかを確かめる
+   * 
+   * @param key
+   * @return 登録されていればtrue, そうでなければfalse
+   */
+  def exists(key: String): Boolean = {
+    var currIdx = 1;
+    for (char <- key) {
+      val nextIdx = base(currIdx) + char.toInt;
+      if (nextIdx < size && check(nextIdx) == currIdx) {
+        currIdx = nextIdx;
+      } else {
+        return false;
+      }
+    }
+    if (data(currIdx) == null) false else true;
   }
 
   /**
@@ -257,8 +276,13 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
         return ();
       }
     }
-    println(key + " : " + dataToString(data(currIdx)));
-    println("遷移に成功しました。");
+    if (data(currIdx) == null) {
+      println(key + " : null");
+      println("遷移には成功しましたが、データはありません。");
+    } else {
+      println(key + " : " + dataToString(data(currIdx)));
+      println("遷移に成功しました。");
+    }
     return ();
   }
 
