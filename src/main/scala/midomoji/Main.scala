@@ -73,12 +73,14 @@ object Main {
 
       // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin ./dictionary/token_meta_info.bin
       case ("--analyze") :: dictBin :: matrixBin :: configBin :: posInfoBin :: tokenMetaInfoBin :: Nil => {
-        analyze(dictBin, matrixBin, configBin, posInfoBin, tokenMetaInfoBin);
+        val midomoji = new Midomoji(dictBin, matrixBin, configBin, posInfoBin, tokenMetaInfoBin);
+        midomoji.analyzeStdin(node => node.mkString("\n") + "\n");
       }
 
       // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin ./dictionary/token_meta_info.bin ./target.txt
       case ("--analyze") :: dictBin :: matrixBin :: configBin :: posInfoBin :: tokenMetaInfoBin :: targetPath :: Nil => {
-        analyze(dictBin, matrixBin, configBin, posInfoBin, tokenMetaInfoBin, targetPath);
+        val midomoji = new Midomoji(dictBin, matrixBin, configBin, posInfoBin, tokenMetaInfoBin);
+        midomoji.analyzeFile(targetPath)(node => node.mkString("\n") + "\n");
       }
 
       case _ => {
@@ -87,44 +89,6 @@ object Main {
         help += "-d, --debug                                       : デバッグモード起動";
         help += "-h, --help                                        : ヘルプの表示";
         println(help.mkString("\n"));
-      }
-    }
-  }
-
-  def analyze(dictBin: String, matrixBin: String, configBin: String, posInfoBin: String, tokenMetaInfoBin: String, targetPath: String = null): Unit = {
-    var prefixtree    = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
-    var matrix        = Util.kryoDeserialize[Matrix](matrixBin);
-    var charType      = Util.kryoDeserialize[CharType](configBin);
-    var posInfo       = Util.kryoDeserialize[PosInfo](posInfoBin);
-    var tokenMetaInfo = Util.kryoDeserialize[TokenMetaInfo](tokenMetaInfoBin);
-    def _analyze(text: String): String = {
-      val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
-      val viterbi = Viterbi(prefixtree, matrix, charType);
-      viterbi.analyze(normalized) match {
-        case Some(node) => node.mkString("\n");
-        case None => {
-          System.err.println("ノードが途中で途切れました");
-          "";
-        }
-      }
-    }
-    if (targetPath == null) {
-      var line = readLine;
-      while (line != null) {
-        _analyze(line);
-        line = readLine;
-      }
-    } else {
-      Using[Source, Unit](Source.fromFile(targetPath)) { s =>
-        val sb = new StringBuilder(300000);
-        s.getLines.foreach { line =>
-          if (sb.length() > 300000) {
-            println(sb);
-            sb.setLength(0);
-          }
-          sb.append(_analyze(line));
-        }
-        println(sb);
       }
     }
   }
