@@ -18,9 +18,9 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
             val nextLatticeIdx = i + 3;
             // FIXME: CharType 0 が default だということに依存している
             val TokenConfig(charTypeName, forceUnigram, groupToken, ngram, tokens) = charType.getTokenConfig(0);
-            if (forceUnigram || prefixtree.find(char) == None) {
+            if (forceUnigram || !prefixtree.exists(char)) {
               lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-                val Array(leftId, rightId, genCost, posId, id) = token;
+                val Array(leftId, rightId, genCost, posId, id, _*) = token;
                 new LatticeNode(surface, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
               }
             }
@@ -38,11 +38,11 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
             val (charTypeId, tokenConfig) = config;
             val TokenConfig(charTypeName, forceUnigram, groupToken, ngram, tokens) = tokenConfig;
             // unigramトークン生成
-            if (forceUnigram || prefixtree.find(char) == None) {
+            if (forceUnigram || !prefixtree.exists(char)) {
               val surface    = str;
               val nextLatticeIdx = i + 2;
               lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-                val Array(leftId, rightId, genCost, posId, id) = token;
+                val Array(leftId, rightId, genCost, posId, id, _*) = token;
                 new LatticeNode(str, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
               }
             }
@@ -54,10 +54,10 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
               (startIdx until endIdx).exists { nextIdx =>
                 val nextChar   = text(nextIdx);
                 val nextLatticeIdx = nextIdx + 2;
-                if (charType.typeIs(nextChar, charTypeId)) {
-                  surface += nextChar;
+                surface += nextChar;
+                if (charType.typeIs(nextChar, charTypeId) && !prefixtree.exists(surface)) {
                   lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-                    val Array(leftId, rightId, genCost, posId, id) = token;
+                    val Array(leftId, rightId, genCost, posId, id, _*) = token;
                     val optimizedGenCost = if (surface.length > 3) genCost * (100 + 10 * surface.length) / 100 else genCost;
                     new LatticeNode(surface, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
                   }
@@ -82,7 +82,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
                   val nextLatticeIdx = gtoken.endIdx + 2;
                   lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
                     val surface = gtoken.surface.toString;
-                    val Array(leftId, rightId, genCost, posId, id) = token;
+                    val Array(leftId, rightId, genCost, posId, id, _*) = token;
                     val optimizedGenCost = if (surface.length > 3) genCost * (100 + 10 * surface.length) / 100 else genCost;
                     new LatticeNode(surface, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
                   }
@@ -106,7 +106,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
         val nextLatticeIdx = gtoken.endIdx + 2;
         lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
           val surface = gtoken.surface.toString;
-          val Array(leftId, rightId, genCost, posId, id) = token;
+          val Array(leftId, rightId, genCost, posId, id, _*) = token;
           val optimizedGenCost = if (surface.length > 3) genCost * (100 + 10 * surface.length) / 100 else genCost;
           new LatticeNode(surface, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
         }

@@ -4,7 +4,7 @@ function usage {
 cat >&2 <<EOF
 #####################################################################################
 # [ usage ]
-#   ./import-dictionary.sh [IPADIC_DIR]
+#   ./import.sh [IPADIC_DIR]
 #
 #####################################################################################
 EOF
@@ -68,7 +68,7 @@ done
 
 infolog "build matrix.def"
 nkf -Luw $IPADIC_DIR/$MATRIX | tr " " "\t"  > $DICT_DIR/matrix.tsv
-infolog "normalize and sort morpheme.csv"
+infolog "convert csv to tsv and normalize morphemes"
 ls $IPADIC_DIR/*.csv | xargs cat | nkf -Luw | tr "," "\t" | python3 $SCRIPT_DIR/normalize.py | LC_ALL=C sort -t$'\t' -k1 > $DICT_DIR/raw_morpheme.tsv
 infolog "build pos.tsv"
 cat $DICT_DIR/raw_morpheme.tsv | awk -F$'\t' '{print $5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10}' | LC_ALL=C sort | uniq > $DICT_DIR/pos.tsv
@@ -77,7 +77,7 @@ cat $CONFIG_DIR/$USER_POS | sed -r "s/[[:space:]]*#.*//" | grep -v "^$" >> $DICT
 cat $CONFIG_DIR/$USER_CHAR | sed -r "s/[[:space:]]*#.*//" | grep -v "^$" > $DICT_DIR/char.tsv
 cat $CONFIG_DIR/$USER_CHAR_TYPE | sed -r "s/[[:space:]]*#.*//" | grep -v "^$" > $DICT_DIR/char_type.tsv
 cat $CONFIG_DIR/$USER_UNK | sed -r "s/[[:space:]]*#.*//" | grep -v "^$" | python3 $SCRIPT_DIR/morpheme_converter.py unk $DICT_DIR/pos.tsv | LC_ALL=C sort | uniq  > $DICT_DIR/unk.tsv
-infolog "build morpheme.tsv"
+infolog "build morphemes.tsv"
 cat $DICT_DIR/raw_morpheme.tsv | python3 $SCRIPT_DIR/morpheme_converter.py morpheme $DICT_DIR/pos.tsv > $DICT_DIR/morpheme.tsv
 rm $DICT_DIR/raw_morpheme.tsv
 infolog "Complete!!"

@@ -9,7 +9,7 @@ import java.io.{FileOutputStream, FileInputStream};
 object Main {
   def main(args: Array[String]): Unit = {
     args.toList match {
-      // --build-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
+      // --build-dict ./dictionary/morpheme.tsv ./dictionary/dict.bin
       case ("--build-dict") :: morphemePath :: dictBin :: Nil => {
         val parse = (arr: Array[String], id: Int) => {
           val Array(surface, left, right, cost, pos, base, yomi, pron) = arr;
@@ -43,7 +43,7 @@ object Main {
         Util.kryoSerialize[PosInfo](posInfo, posInfoBin);
       }
 
-      // --check-dict ./dictionary/morpheme.csv ./dictionary/dict.bin
+      // --check-dict ./dictionary/morpheme.tsv ./dictionary/dict.bin
       case ("--check-dict") :: morphemePath :: dictBin :: Nil => {
         var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
         val parse = (arr: Array[String], id: Int) => {
@@ -137,6 +137,7 @@ object Main {
           posInfo  = new PosInfo(Array[String]());
         }
         case "serialize" :: xs => {
+          prefixtree.optimize;
           PrefixTreeSerializeObject.serialize[Array[Array[Int]]](prefixtree, dictBin);
           Util.kryoSerialize[Matrix](matrix, matrixBin);
           Util.kryoSerialize[CharType](charType, configBin);
@@ -156,10 +157,8 @@ object Main {
           }
         }
         case "find" :: text :: xs => {
-          prefixtree.find(text) match {
-            case None    => println("not found");
-            case Some(m) => println(m);
-          }
+          def dataToString: Array[Array[Int]] => String = arr => arr.map(e => "(" + e(0) + ", " + e(1) + ", " + e(2) + ")").mkString(", ");
+          prefixtree.debugFind(text)(dataToString);
         }
         case "search" :: text :: xs => {
           val len = text.length;
@@ -209,15 +208,14 @@ object Main {
           };
         }
         case "dump" :: xs => {
-          prefixtree.dump;
+          println(xs);
+          xs match {
+            case s :: e :: rest => prefixtree.dump(s.toInt, e.toInt);
+            case _              => prefixtree.dump();
+          }
         }
         case "status" :: xs => {
-          if (prefixtree != null && matrix != null) {
-            println("----- prefixtree -----");
-            println("size=%d".format(prefixtree.size));
-          } else {
-            println("dict is null");
-          }
+          prefixtree.status;
         }
         case "exit" :: xs => return ();
         case _ => {
