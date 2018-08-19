@@ -43,6 +43,12 @@ object Main {
         Util.kryoSerialize[PosInfo](posInfo, posInfoBin);
       }
 
+      // --build-token-meta-info ./dictionary/morpheme.tsv ./dictionary/token_meta_info.bin
+      case ("--build-token-meta-info") :: morphemePath :: tokenMetaInfoBin :: Nil => {
+        val tokenMetaInfo = TokenMetaInfo.build(morphemePath);
+        Util.kryoSerialize[TokenMetaInfo](tokenMetaInfo, tokenMetaInfoBin);
+      }
+
       // --check-dict ./dictionary/morpheme.tsv ./dictionary/dict.bin
       case ("--check-dict") :: morphemePath :: dictBin :: Nil => {
         var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
@@ -60,19 +66,19 @@ object Main {
         Matrix.check(matrix, matrixPath);
       }
 
-      // --debug ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin
-      case ("--debug") :: dictBin :: matrixBin :: configBin :: posInfoBin :: Nil => {
-        debug(dictBin, matrixBin, configBin, posInfoBin);
+      // --debug ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin ./dictionary/token_meta_info.bin
+      case ("--debug") :: dictBin :: matrixBin :: configBin :: posInfoBin :: tokenMetaInfoBin :: Nil => {
+        debug(dictBin, matrixBin, configBin, posInfoBin, tokenMetaInfoBin);
       }
 
-      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin
-      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posInfoBin :: Nil => {
-        analyze(dictBin, matrixBin, configBin, posInfoBin);
+      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin ./dictionary/token_meta_info.bin
+      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posInfoBin :: tokenMetaInfoBin :: Nil => {
+        analyze(dictBin, matrixBin, configBin, posInfoBin, tokenMetaInfoBin);
       }
 
-      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin
-      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posInfoBin :: targetPath :: Nil => {
-        analyze(dictBin, matrixBin, configBin, posInfoBin, targetPath);
+      // --analyze ./dictionary/dict.bin ./dictionary/matrix.bin ./dictionary/config.bin ./dictionary/pos_info.bin ./dictionary/token_meta_info.bin ./target.txt
+      case ("--analyze") :: dictBin :: matrixBin :: configBin :: posInfoBin :: tokenMetaInfoBin :: targetPath :: Nil => {
+        analyze(dictBin, matrixBin, configBin, posInfoBin, tokenMetaInfoBin, targetPath);
       }
 
       case _ => {
@@ -85,11 +91,12 @@ object Main {
     }
   }
 
-  def analyze(dictBin: String, matrixBin: String, configBin: String, posInfoBin: String, targetPath: String = null): Unit = {
-    var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
-    var matrix     = Util.kryoDeserialize[Matrix](matrixBin);
-    var charType   = Util.kryoDeserialize[CharType](configBin);
-    var posInfo  = Util.kryoDeserialize[PosInfo](posInfoBin);
+  def analyze(dictBin: String, matrixBin: String, configBin: String, posInfoBin: String, tokenMetaInfoBin: String, targetPath: String = null): Unit = {
+    var prefixtree    = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
+    var matrix        = Util.kryoDeserialize[Matrix](matrixBin);
+    var charType      = Util.kryoDeserialize[CharType](configBin);
+    var posInfo       = Util.kryoDeserialize[PosInfo](posInfoBin);
+    var tokenMetaInfo = Util.kryoDeserialize[TokenMetaInfo](tokenMetaInfoBin);
     def _analyze(text: String): String = {
       val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
       val viterbi = Viterbi(prefixtree, matrix, charType);
@@ -122,11 +129,12 @@ object Main {
     }
   }
 
-  def debug(dictBin: String, matrixBin: String, configBin: String, posInfoBin: String): Unit = {
-    var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
-    var matrix     = Util.kryoDeserialize[Matrix](matrixBin);
-    var charType   = Util.kryoDeserialize[CharType](configBin);
-    var posInfo  = Util.kryoDeserialize[PosInfo](posInfoBin);
+  def debug(dictBin: String, matrixBin: String, configBin: String, posInfoBin: String, tokenMetaInfoBin: String): Unit = {
+    var prefixtree    = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
+    var matrix        = Util.kryoDeserialize[Matrix](matrixBin);
+    var charType      = Util.kryoDeserialize[CharType](configBin);
+    var posInfo       = Util.kryoDeserialize[PosInfo](posInfoBin);
+    var tokenMetaInfo = Util.kryoDeserialize[TokenMetaInfo](tokenMetaInfoBin);
     def go(): Unit = {
       print("command : ");
       readLine.split(" ").toList match {
