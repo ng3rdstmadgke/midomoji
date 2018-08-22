@@ -25,6 +25,22 @@ object Using {
 object Util {
   def toIntOption(s: String): Option[Int] = Try(s.toInt).toOption;
 
+  def getNormalizedPath(path: String): String = Paths.get(path).normalize.toString;
+
+  // build前のファイル
+  def morphemeTsv(dir: String = ""): String = getNormalizedPath(dir + "/morpheme.tsv");
+  def matrixTsv(dir: String = ""): String   = getNormalizedPath(dir + "/matrix.tsv");
+  def charTsv(dir: String = ""): String     = getNormalizedPath(dir + "/char.tsv");
+  def charTypeTsv(dir: String = ""): String = getNormalizedPath(dir + "/char_type.tsv");
+  def unkTsv(dir: String = ""): String      = getNormalizedPath(dir + "/unk.tsv");
+  def posTsv(dir: String = ""): String      = getNormalizedPath(dir + "/pos.tsv");
+  // build後のファイル
+  def dictBin(dir: String = ""): String     = getNormalizedPath(dir + "/dict.bin");
+  def matrixBin(dir: String = ""): String   = getNormalizedPath(dir + "/matrix.bin");
+  def configBin(dir: String = ""): String   = getNormalizedPath(dir + "/config.bin");
+  def posInfoBin(dir: String = ""): String  = getNormalizedPath(dir + "/pos_info.bin");
+  def metaInfoBin(dir: String = ""): String = getNormalizedPath(dir + "/meta_info.bin");
+
   // kryoを使ったシリアライズ(デフォルトコンストラクタを持たないクラスは扱えない)
   def kryoSerialize[A](obj: A, path: String): Unit = {
     Using[FileOutputStream, Unit](new FileOutputStream(path)) { fos =>
@@ -38,6 +54,16 @@ object Util {
   // kryoを使ったデシリアライズ(デフォルトコンストラクタを持たないクラスは扱えない)
   def kryoDeserialize[A](path: String)(implicit tag: ClassTag[A]): A = {
     Using[FileInputStream, A](new FileInputStream(path)) { fis =>
+      Using[Input, A](new Input(fis)) { in =>
+        val kryo = new Kryo();
+        kryo.readObject(in, tag.runtimeClass.asInstanceOf[Class[A]]);
+      }
+    }
+  }
+
+  // kryoを使ったデシリアライズ(デフォルトコンストラクタを持たないクラスは扱えない)
+  def kryoDeserializeFromResource[A](path: String)(implicit tag: ClassTag[A]): A = {
+    Using[InputStream, A](getClass.getResourceAsStream(path)) { fis =>
       Using[Input, A](new Input(fis)) { in =>
         val kryo = new Kryo();
         kryo.readObject(in, tag.runtimeClass.asInstanceOf[Class[A]]);

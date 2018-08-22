@@ -4,12 +4,9 @@ import java.text.Normalizer;
 import scala.io.Source;
 import scala.io.StdIn.readLine;
 
-class Midomoji(dictBin: String, matrixBin: String, configBin: String, posInfoBin: String, tokenMetaInfoBin: String) {
-  private[this] val prefixtree    = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](dictBin);
-  private[this] val matrix        = Util.kryoDeserialize[Matrix](matrixBin);
-  private[this] val charType      = Util.kryoDeserialize[CharType](configBin);
-  private[this] lazy val posInfo       = Util.kryoDeserialize[PosInfo](posInfoBin);
-  private[this] lazy val tokenMetaInfo = Util.kryoDeserialize[TokenMetaInfo](tokenMetaInfoBin);
+class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
+               private[this] val matrix: Matrix,
+               private[this] val charType: CharType) {
   private[this] val viterbi = new Viterbi(prefixtree, matrix, charType);
   val buffersize = 200000;
 
@@ -49,5 +46,44 @@ class Midomoji(dictBin: String, matrixBin: String, configBin: String, posInfoBin
       line = readLine;
     }
     println(sb);
+  }
+}
+
+object Midomoji {
+  def format(fmt: String): LatticeNode => String = {
+    fmt match {
+      case "wakati"      => wakati;
+      case "detail"      => detail();
+      case "wakati-base" => wakatiBase()
+      case _             => simple;
+    }
+  }
+
+  def simple(nodes: LatticeNode): String = {
+    val str = nodes.map(n => "%s\t%d\t%d\t%d".format(n.surface, n.leftId, n.rightId, n.genCost));
+    "BOS\n" + str.mkString("\n") + "\nEOS\n";
+  }
+
+  def wakati(nodes: LatticeNode): String = {
+    nodes.map(_.surface).mkString(" ") + "\n";
+  }
+
+  def detail(): LatticeNode => String = {
+    val posInfo  = Util.kryoDeserializeFromResource[PosInfo](Util.posInfoBin());
+    val metaInfo = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
+    nodes: LatticeNode => {
+      val str = nodes.map { n =>
+        val pos = posInfo.getPos(n.posId);
+        val base = metaInfo.getBaseForm(n.id, n.surface);
+        val yomi = metaInfo.getYomi(n.id, n.surface);
+        "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(n.surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
+      }
+      "BOS\n" + str.mkString("\n") + "\nEOS\n";
+    }
+  }
+
+  def wakatiBase(): LatticeNode => String = {
+    val metaInfo = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
+    nodes: LatticeNode => nodes.map(n => metaInfo.getBaseForm(n.id, n.surface)).mkString(" ") + "\n";
   }
 }

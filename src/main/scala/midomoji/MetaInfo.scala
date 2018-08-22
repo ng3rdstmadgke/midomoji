@@ -5,7 +5,7 @@ import scala.io.Source;
 /**
  * 形態素の原型とよみを格納する。
  */
-class TokenMetaInfo(private[this] val metaData: Array[Array[String]]) extends Serializable {
+class MetaInfo(private[this] val metaData: Array[Array[String]]) extends Serializable {
   def this() = this(Array[Array[String]]());
   def getBaseForm(id: Int, default: String): String = {
     if (id > 0 && id < metaData.length) {
@@ -26,8 +26,8 @@ class TokenMetaInfo(private[this] val metaData: Array[Array[String]]) extends Se
   }
 }
 
-object TokenMetaInfo {
-  def build(morphemePath: String): TokenMetaInfo = {
+object MetaInfo {
+  def build(morphemePath: String): MetaInfo = {
     val metaData = Using[Source, Array[Array[String]]](Source.fromFile(morphemePath)) { s =>
       s.getLines.toArray.map { line =>
         val Array(surface, left, right, genCost, posId, baseForm, yomi, pron) = line.split("\t");
@@ -36,6 +36,6 @@ object TokenMetaInfo {
         Array(elem1, elem2);
       }
     }
-    new TokenMetaInfo(metaData);
+    new MetaInfo(metaData);
   }
 }

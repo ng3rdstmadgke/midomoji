@@ -20,3 +20,4 @@ echo  "build source ..."
 sbt clean assembly || exit 1
 $SCRIPT_DIR/import.sh $IPADIC_DIR || exit 1
 $SCRIPT_DIR/build.sh || exit 1
+sbt clean assembly || exit 1

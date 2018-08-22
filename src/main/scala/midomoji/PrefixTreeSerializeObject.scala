@@ -17,4 +17,9 @@ object PrefixTreeSerializeObject {
     val obj = Util.kryoDeserialize[PrefixTreeSerializeObject[A]](path);
     new PrefixTree[A](obj.size, obj.base, obj.check, obj.data);
   }
+
+  def deserializeFromResource[A](path: String)(implicit c: ClassTag[A]): PrefixTree[A] = {
+    val obj = Util.kryoDeserializeFromResource[PrefixTreeSerializeObject[A]](path);
+    new PrefixTree[A](obj.size, obj.base, obj.check, obj.data);
+  }
 }
