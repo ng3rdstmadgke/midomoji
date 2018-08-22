@@ -12,15 +12,15 @@ exit 1
 }
 
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
-echo  "build dict ..."
 $SCRIPT_DIR/midomoji build-dict || exit 1
-echo  "build matrix ..."
 $SCRIPT_DIR/midomoji build-matrix || exit 1
-echo  "build config ..."
 $SCRIPT_DIR/midomoji build-config || exit 1
-echo  "build pos-info ..."
 $SCRIPT_DIR/midomoji build-pos-info || exit 1
-echo  "check dict ..."
+$SCRIPT_DIR/midomoji build-meta-info || exit 1
 $SCRIPT_DIR/midomoji check-dict || exit 1
-echo  "check matrix ..."
 $SCRIPT_DIR/midomoji check-matrix || exit 1
+cp $SCRIPT_DIR/dictionary/dict.bin $SCRIPT_DIR/src/main/resources/
+cp $SCRIPT_DIR/dictionary/matrix.bin $SCRIPT_DIR/src/main/resources/
+cp $SCRIPT_DIR/dictionary/config.bin $SCRIPT_DIR/src/main/resources/
+cp $SCRIPT_DIR/dictionary/pos_info.bin $SCRIPT_DIR/src/main/resources/
+cp $SCRIPT_DIR/dictionary/meta_info.bin $SCRIPT_DIR/src/main/resources/
