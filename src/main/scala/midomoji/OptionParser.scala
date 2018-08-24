@@ -42,9 +42,12 @@ object OptionParser {
         case ("-f" | "--format") :: format :: rest => {
            go(rest, ret + ("format" -> format));
         }
+        case ("-o" | "--output") :: output :: rest => {
+           go(rest, ret + ("output" -> output));
+        }
         case some :: rest => {
-          if (!ret.contains("target")) {
-            go(rest, ret + ("target" -> some));
+          if (!ret.contains("input")) {
+            go(rest, ret + ("input" -> some));
           } else {
             go(rest, ret);
           }

@@ -1,14 +1,13 @@
 package com.github.ng3rdstmadgke.midomoji;
 
 import java.text.Normalizer;
-import scala.io.Source;
-import scala.io.StdIn.readLine;
+import java.io.{BufferedWriter, BufferedReader, OutputStreamWriter, InputStreamReader, OutputStream, InputStream, FileOutputStream, FileInputStream};
+import java.nio.charset.StandardCharsets;
 
 class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
                private[this] val matrix: Matrix,
                private[this] val charType: CharType) {
   private[this] val viterbi = new Viterbi(prefixtree, matrix, charType);
-  val buffersize = 200000;
 
   def analyze(text: String): LatticeNode = {
     val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
@@ -20,32 +19,17 @@ class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
     }
   }
 
-  def analyzeFile(path: String)(nodeToString: LatticeNode => String): Unit = {
-    Using[Source, Unit](Source.fromFile(path)) { s =>
-      val sb = new StringBuilder(buffersize + 10000);
-      s.getLines.foreach { line =>
-        if (sb.length() > buffersize) {
-          println(sb);
-          sb.setLength(0);
+  def analyzeInput(is: InputStream, os: OutputStream)(nodeToString: LatticeNode => String): Unit = {
+    Using[BufferedReader, Unit](new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) { br =>
+      Using[BufferedWriter, Unit](new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8))) { bw =>
+        var line = br.readLine();
+        while (line != null) {
+          bw.write(nodeToString(analyze(line)));
+          line = br.readLine();
         }
-        sb.append(nodeToString(analyze(line)));
+        bw.flush();
       }
-      println(sb);
     }
-  }
-
-  def analyzeStdin(nodeToString: LatticeNode => String): Unit = {
-    val sb = new StringBuilder(buffersize + 10000);
-    var line = readLine;
-    while (line != null) {
-      if (sb.length() > buffersize) {
-        println(sb);
-        sb.setLength(0);
-      }
-      sb.append(nodeToString(analyze(line)));
-      line = readLine;
-    }
-    println(sb);
   }
 }
 

@@ -4,7 +4,7 @@ import scala.io.Source;
 import scala.io.StdIn.readLine;
 import scala.collection.mutable.ListBuffer;
 import java.text.Normalizer;
-import java.io.{FileOutputStream, FileInputStream, InputStream};
+import java.io.{BufferedWriter, BufferedReader, OutputStreamWriter, InputStreamReader, OutputStream, InputStream, FileOutputStream, FileInputStream};
 
 object Main {
   def parse(arr: Array[String], id: Int): Array[Int] = {
@@ -95,20 +95,10 @@ object Main {
         val matrix     = Util.kryoDeserializeFromResource[Matrix](Util.matrixBin());
         val charType   = Util.kryoDeserializeFromResource[CharType](Util.configBin());
         val midomoji = new Midomoji(prefixtree, matrix, charType);
-        argMap.get("target") match {
-          case None         => {
-            argMap.get("format") match {
-              case Some(fmt) => midomoji.analyzeStdin(Midomoji.format(fmt));
-              case _         => midomoji.analyzeStdin(Midomoji.format("simple"));
-            }
-          }
-          case Some(target) => {
-            argMap.get("format") match {
-              case Some(fmt) => midomoji.analyzeFile(target)(Midomoji.format(fmt));
-              case _         => midomoji.analyzeFile(target)(Midomoji.format("simple"));
-            }
-          }
-        }
+        val format = if (argMap.contains("format")) argMap("format") else "simple";
+        val is = if (argMap.contains("input"))  new FileInputStream(argMap("input"))   else System.in;
+        val os = if (argMap.contains("output")) new FileOutputStream(argMap("output")) else System.out;
+        midomoji.analyzeInput(is, os)(Midomoji.format(format));
       }
       case _ => {
         help();
