@@ -19,9 +19,9 @@ class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
     }
   }
 
-  def analyzeInput(is: InputStream, os: OutputStream)(nodeToString: LatticeNode => String): Unit = {
-    Using[BufferedReader, Unit](new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) { br =>
-      Using[BufferedWriter, Unit](new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8))) { bw =>
+  def analyzeInput(is: InputStream, os: OutputStream, bs: Int = 8192)(nodeToString: LatticeNode => String): Unit = {
+    Using[BufferedReader, Unit](new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8), bs)) { br =>
+      Using[BufferedWriter, Unit](new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), bs)) { bw =>
         var line = br.readLine();
         while (line != null) {
           bw.write(nodeToString(analyze(line)));

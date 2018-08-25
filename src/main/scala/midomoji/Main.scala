@@ -20,34 +20,6 @@ object Main {
     }
   }
 
-  def help(): Unit = {
-    val help = """
-[ usage ]
-  java -jar midomoji.jar [COMMAND]
-
-  [ COMMAND ]
-    - analyze [TARGET_FILE] [options]    : 標準入力またはファイルで与えられた文字列を形態素解析する
-
-      [TARGET_FILE] :  解析対象のファイル
-
-      [options]
-        -f | --format <simple | detail | wakati | wakati-base>
-          simple      : 表層文字列,左文脈ID,右文脈ID,生起コスト をタブ区切りで表示する
-          detail      : 表層文字列,左文脈ID,右文脈ID,生起コスト,品詞情報,原型,読み をタブ区切りで表示する
-          wakati      : 表層文字列 を空白区切りで表示する
-          wakati-base : 原型 を空白区切りで表示する
-
-    - build-dict <DICT_DIR>      : 形態素辞書を構築する
-    - build-matrix <DICT_DIR>    : 連接コスト表を構築する
-    - build-config <DICT_DIR>    : 未知語生成設定を構築する
-    - build-pos-info <DICT_DIR>  : 形態素の品詞情報表を構築する
-    - build-meta-info <DICT_DIR> : 形態素のメタ情報表(原型や読みなど)を構築する
-    - check-dict <DICT_DIR>      : 構築した形態素辞書にすべての形態素が登録されているかチェックする
-    - check-matrix <DICT_DIR>    : 構築した連接コスト表にすべての連接コストが登録されているかをチェックする
-    - debug <DICT_DIR>           : デバッグ用コマンドラインを起動する
-""";
-    println(help.trim);
-  }
 
   def main(args: Array[String]): Unit = {
     OptionParser.parse(args) match {
@@ -87,9 +59,6 @@ object Main {
         val matrix = Util.kryoDeserialize[Matrix](Util.matrixBin(dictDir));
         Matrix.check(matrix, Util.matrixTsv(dictDir));
       }
-      case ("debug", argMap) if argMap.contains("dict-dir") => {
-        debug(argMap("dict-dir"));
-      }
       case ("analyze", argMap) => {
         val prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Array[Int]]](Util.dictBin());
         val matrix     = Util.kryoDeserializeFromResource[Matrix](Util.matrixBin());
@@ -98,20 +67,24 @@ object Main {
         val format = if (argMap.contains("format")) argMap("format") else "simple";
         val is = if (argMap.contains("input"))  new FileInputStream(argMap("input"))   else System.in;
         val os = if (argMap.contains("output")) new FileOutputStream(argMap("output")) else System.out;
-        midomoji.analyzeInput(is, os)(Midomoji.format(format));
+        val bs = if (argMap.contains("buffer-size")) argMap("buffer-size").toInt else 8192;
+        midomoji.analyzeInput(is, os, bs)(Midomoji.format(format));
+      }
+      case ("debug", argMap) => {
+        debug();
       }
       case _ => {
-        help();
+        OptionParser.help();
       }
     }
   }
 
-  def debug(dictDir: String): Unit = {
-    var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](Util.dictBin(dictDir));
-    var matrix     = Util.kryoDeserialize[Matrix](Util.matrixBin(dictDir));
-    var charType   = Util.kryoDeserialize[CharType](Util.configBin(dictDir));
-    var posInfo    = Util.kryoDeserialize[PosInfo](Util.posInfoBin(dictDir));
-    var metaInfo   = Util.kryoDeserialize[MetaInfo](Util.metaInfoBin(dictDir));
+  def debug(): Unit = {
+    var prefixtree = PrefixTree[Array[Array[Int]]](5);
+    var matrix     = Matrix(1316, 1316);
+    var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
+    var posInfo    = new PosInfo(Array[String]());
+    var metaInfo   = new MetaInfo(Array[Array[String]]());
     def go(): Unit = {
       print("command : ");
       readLine.split(" ").map(_.trim).toList match {
@@ -121,6 +94,22 @@ object Main {
           charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
           posInfo    = new PosInfo(Array[String]());
           metaInfo   = new MetaInfo(Array[Array[String]]());
+        }
+        case "load" :: xs => {
+          if (xs.isEmpty) {
+            prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Array[Int]]](Util.dictBin());
+            matrix     = Util.kryoDeserializeFromResource[Matrix](Util.matrixBin());
+            charType   = Util.kryoDeserializeFromResource[CharType](Util.configBin());
+            posInfo    = Util.kryoDeserializeFromResource[PosInfo](Util.posInfoBin());
+            metaInfo   = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
+          } else {
+            val dictDir = xs.head;
+            prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](Util.dictBin(dictDir));
+            matrix     = Util.kryoDeserialize[Matrix](Util.matrixBin(dictDir));
+            charType   = Util.kryoDeserialize[CharType](Util.configBin(dictDir));
+            posInfo    = Util.kryoDeserialize[PosInfo](Util.posInfoBin(dictDir));
+            metaInfo   = Util.kryoDeserialize[MetaInfo](Util.metaInfoBin(dictDir));
+          }
         }
         case "cost" :: l :: r :: xs => {
           try {
@@ -193,16 +182,17 @@ object Main {
         case "exit" :: xs => return ();
         case _ => {
           val help = ListBuffer[String]();
-          help += "init                                 : 辞書をリセットする";
-          help += "cost <LEFT> <RIGHT>                  : 連接コストを表示する";
-          help += "find <TEXT>                          : トライ木に対してSURFACEをキーとする値を取り出す";
-          help += "search <TEXT>                        : トライ木に対して共通接頭辞検索を行う";
-          help += "tokenize <TEXT>                      : 未知語ノードの生成を行う";
-          help += "analyze <TEXT>                       : 形態素解析を行う";
-          help += "add <SURFACE>                        : トライ木に要素を追加する";
-          help += "dump                                 : トライ木をダンプする";
-          help += "status                               : 辞書のステータスを表示する";
-          help += "exit                                 : デバッグモードを終了する";
+          help += "init                : 辞書をリセットする";
+          help += "load [DICT_DIR]     : 辞書を読み込む。DICT_DIRを指定しない場合はresourcesから読み込む";
+          help += "cost <LEFT> <RIGHT> : 連接コストを表示する";
+          help += "find <TEXT>         : トライ木に対してSURFACEをキーとする値を取り出す";
+          help += "search <TEXT>       : トライ木に対して共通接頭辞検索を行う";
+          help += "tokenize <TEXT>     : 未知語ノードの生成を行う";
+          help += "analyze <TEXT>      : 形態素解析を行う";
+          help += "add <SURFACE>       : トライ木に要素を追加する";
+          help += "dump                : トライ木をダンプする";
+          help += "status              : 辞書のステータスを表示する";
+          help += "exit                : デバッグモードを終了する";
           println(help.mkString("\n"));
         }
       }
