@@ -16,7 +16,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
           if (nextIdx < len && text(nextIdx).isLowSurrogate) {
             val surface = "" + char + text(nextIdx);
             val nextLatticeIdx = i + 3;
-            // FIXME: CharType 0 が default だということに依存している
+            // 現状サロゲートペアの文字種はからなずDEFAULT
             val TokenConfig(charTypeName, forceUnigram, groupToken, ngram, tokens) = charType.getTokenConfig(0);
             if (forceUnigram || !prefixtree.exists(char)) {
               lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>

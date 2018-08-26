@@ -59,6 +59,15 @@ object CharType {
         (arr(0), arr(1) == "1", arr(2) == "1", arr(3).toInt);
       };
     }
+    // 必ず先頭にDEFAULTを設定する
+    val defaultIdx = charArr.indexWhere(_._1 == "DEFAULT");
+    if (defaultIdx == -1) {
+      throw new RuntimeException("DEFAULT char type is not found. add DEFAULT char type to char.def");
+    } else {
+      val tmp = charArr(0);
+      charArr(0) = charArr(defaultIdx);
+      charArr(defaultIdx) = tmp;
+    }
     // char_type.def
     val charTypeArr = Using[Source, Array[((Int, Int), List[String])]](Source.fromFile(charTypePath)) { s =>
       s.getLines.toArray.map { line =>
