@@ -116,7 +116,7 @@ elif [ "$MODE" = "build-config" ]; then
   SHOULD_BUILD1=$(should_build $CHAR      $CHECK_FILE_CHAR)
   SHOULD_BUILD2=$(should_build $CHAR_TYPE $CHECK_FILE_CHAR_TYPE)
   SHOULD_BUILD3=$(should_build $UNK       $CHECK_FILE_UNK)
-  if [ -n "$FORCE" -o "$SHOULD_BUILD1" = "1" -o "$SHOULD_BUILD2" = "1" -o "$SHOULD_BUILD2" = "1" ]; then
+  if [ -n "$FORCE" -o "$SHOULD_BUILD1" = "1" -o "$SHOULD_BUILD2" = "1" -o "$SHOULD_BUILD3" = "1" ]; then
     java -jar $JAR_FILE build-config $DICT_DIR
     md5sum $CHAR      > $CHECK_FILE_CHAR
     md5sum $CHAR_TYPE > $CHECK_FILE_CHAR_TYPE
