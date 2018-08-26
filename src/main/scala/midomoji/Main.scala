@@ -2,7 +2,7 @@ package com.github.ng3rdstmadgke.midomoji;
 
 import scala.io.Source;
 import scala.io.StdIn.readLine;
-import scala.collection.mutable.ListBuffer;
+import scala.collection.mutable.{ListBuffer, HashMap};
 import java.text.Normalizer;
 import java.io.{BufferedWriter, BufferedReader, OutputStreamWriter, InputStreamReader, OutputStream, InputStream, FileOutputStream, FileInputStream};
 
@@ -82,7 +82,7 @@ object Main {
   def debug(): Unit = {
     var prefixtree = PrefixTree[Array[Array[Int]]](5);
     var matrix     = Matrix(1316, 1316);
-    var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
+    var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0), HashMap[(Int, Int), Array[Int]]());
     var posInfo    = new PosInfo(Array[String]());
     var metaInfo   = new MetaInfo(Array[Array[String]]());
     def go(): Unit = {
@@ -91,7 +91,7 @@ object Main {
         case "init" :: xs => {
           prefixtree = PrefixTree[Array[Array[Int]]](5);
           matrix     = Matrix(1316, 1316);
-          charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
+          charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0), HashMap[(Int, Int), Array[Int]]());
           posInfo    = new PosInfo(Array[String]());
           metaInfo   = new MetaInfo(Array[Array[String]]());
         }

@@ -1,6 +1,7 @@
 package com.github.ng3rdstmadgke.midomoji
 
 import scala.io.Source;
+import scala.collection.mutable.HashMap;
 
 /**
  * charに対応する文字種IDとトークン生成設定を返す。
@@ -11,22 +12,41 @@ import scala.io.Source;
  * @param ngram 何グラムまで生成するか(バイグラムなら2、トリグラムなら3を指定する)。
  * @param tokens 生成するトークンの雛形の配列。Array(leftId, rightId, genCost, posId, id)
  */
-case class TokenConfig(charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Array[Int]]) extends Serializable {
-  def this() = this("", false, false, 0, Array[Array[Int]]());
+case class TokenConfig(charTypeId: Int, charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Array[Int]]) extends Serializable {
+  def this() = this(0, "", false, false, 0, Array[Array[Int]]());
 }
 
-class CharType(private[this] val charTypeMap: Array[Array[Int]], private[this] val tokenConfigSet: Array[TokenConfig]) extends Serializable {
+class CharType(private[this] val charTypeMap: Array[Array[Int]], private[this] val tokenConfigSet: Array[TokenConfig], private[this] val codePointMap: HashMap[(Int, Int), Array[Int]]) extends Serializable {
   val charTypeNum = tokenConfigSet.length;
 
-  def this() = this(Array[Array[Int]](), Array[TokenConfig]());
+  def this() = this(Array[Array[Int]](), Array[TokenConfig](), HashMap[(Int, Int), Array[Int]]());
 
   /**
    * charに対応する文字種IDとトークン生成設定を返す。
    * 一つの文字に対して複数個の設定がある場合がある。
    * 例えば「ー」はHIRAGANAとKATAKANA2つの文字種として扱われる。
    */
-  def getTokenConfigs(char: Char): Array[(Int, TokenConfig)] = {
-    charTypeMap(char.toInt).map(charType => (charType, tokenConfigSet(charType)));
+  def getTokenConfigs(char: Char): Array[TokenConfig] = {
+    charTypeMap(char.toInt).map(charType => tokenConfigSet(charType));
+  }
+
+  def getTokenConfigs(codePoint: Int): Array[TokenConfig] = {
+    if (codePoint <= 65535) {
+      charTypeMap(codePoint).map(charType => tokenConfigSet(charType));
+    } else {
+      val tmp = new Array[TokenConfig](charTypeNum);
+      codePointMap.foreach { e =>
+        val (start, end) = e._1;
+        val charTypeArr  = e._2;
+        if (codePoint >= start && codePoint <= end) {
+          charTypeArr.foreach { charType =>
+            tmp(charType) = tokenConfigSet(charType);
+          }
+        }
+      }
+      val ret = tmp.filter(_ != null);
+      if (ret.length == 0) Array(tokenConfigSet(0)) else ret;
+    }
   }
 
   /**
@@ -103,11 +123,13 @@ object CharType {
     // tokenConfigSetの生成
     val tokenConfigSet = (0 until charTypeNum).toArray.map { i =>
       val (charType, forceUnigram, groupToken, ngram) = charArr(i);
-      TokenConfig(charType, forceUnigram, groupToken, ngram, tokens(i).toArray);
+      TokenConfig(i, charType, forceUnigram, groupToken, ngram, tokens(i).toArray);
     }
 
     // charTypeMapの生成
-    val charTypeMapTmp = Array.fill[List[Int]](65536)(Nil);
+    val charMax = 65536;
+    val charTypeMapTmp = Array.fill[List[Int]](charMax)(Nil);
+    val codePointMap   = new HashMap[(Int, Int), Array[Int]]();
     charTypeArr.foreach { e =>
       val (range, charTypes) = e;
       val charTypeList = charTypes.map { charType =>
@@ -116,14 +138,23 @@ object CharType {
           case None     => -1;
         }
       }.filter(_ > 0);
-      (range._1 to range._2).foreach { i =>
-        if (i > 0 && i < 65536) {
+      // 2バイトに収まる文字
+      if (range._1 < charMax) {
+        val start = range._1;
+        val end   = if (range._2 < charMax) range._2 else charMax - 1 ;
+        (start to end).foreach { i =>
           charTypeList.foreach { charType =>
             if (!charTypeMapTmp(i).exists(_ == charType)) {
               charTypeMapTmp(i) = charType :: charTypeMapTmp(i);
             }
           }
         }
+      }
+      // 2バイトを超える文字
+      if (range._2 >= charMax) {
+        val cpStart = if (range._1 >= charMax) range._1 else charMax;
+        val cpEnd   = range._2;
+        codePointMap += ((cpStart, cpEnd) -> charTypeList.toArray);
       }
     }
     val charTypeMap = charTypeMapTmp.map { e =>
@@ -132,6 +163,6 @@ object CharType {
         case e   => e.toArray;
       }
     }
-    new CharType(charTypeMap, tokenConfigSet);
+    new CharType(charTypeMap, tokenConfigSet, codePointMap);
   }
 }

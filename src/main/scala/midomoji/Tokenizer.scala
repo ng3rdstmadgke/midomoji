@@ -17,7 +17,7 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
             val surface = "" + char + text(nextIdx);
             val nextLatticeIdx = i + 3;
             // 現状サロゲートペアの文字種はからなずDEFAULT
-            val TokenConfig(charTypeName, forceUnigram, groupToken, ngram, tokens) = charType.getTokenConfig(0);
+            val TokenConfig(charTypeId, charTypeName, forceUnigram, groupToken, ngram, tokens) = charType.getTokenConfig(0);
             if (forceUnigram || !prefixtree.exists(char)) {
               lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
                 val Array(leftId, rightId, genCost, posId, id, _*) = token;
@@ -34,9 +34,8 @@ class Tokenizer[A](charType: CharType, prefixtree: PrefixTree[A]) {
         } else {
           // === 普通の2byte文字 ===
           val str = char.toString;
-          charType.getTokenConfigs(char).foreach { config =>
-            val (charTypeId, tokenConfig) = config;
-            val TokenConfig(charTypeName, forceUnigram, groupToken, ngram, tokens) = tokenConfig;
+          charType.getTokenConfigs(char).foreach { tokenConfig =>
+            val TokenConfig(charTypeId, charTypeName, forceUnigram, groupToken, ngram, tokens) = tokenConfig;
             // unigramトークン生成
             if (forceUnigram || !prefixtree.exists(char)) {
               val surface    = str;
