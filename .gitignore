@@ -1,3 +1,4 @@
 target/
 dictionary/*
+src/main/resources/*.bin
 !.gitkeep
