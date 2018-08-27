@@ -103,8 +103,7 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
       val tmpNextIdx = currBase + currChar;
       if (tmpNextIdx < size && check(tmpNextIdx) != 0) { // 衝突時
         // 1. currIdx から遷移しているすべてのノード(遷移先ノード)を取得 (index, char)
-        val nextNodes = (currBase until PrefixTree.CHAR_MAX + currBase).
-          filter(_ < size).
+        val nextNodes = (currBase until Math.min(PrefixTree.CHAR_MAX + currBase, size)).
           foldLeft(List[(Int, Int)]()) { (xs, i) =>
             if (check(i) == currIdx) (i, i - currBase) :: xs else xs
           }
@@ -123,8 +122,7 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
           check(dstIdx) = check(srcIdx);
           data(dstIdx)  = data(srcIdx);
           // 4. 旧遷移先ノードから更に遷移しているノードの check を新遷移先ノードの index で更新
-          (srcBase until srcBase + PrefixTree.CHAR_MAX).
-            filter(_ < size).
+          (srcBase until Math.min(srcBase + PrefixTree.CHAR_MAX, size)).
             foreach { i => if (check(i) == srcIdx) check(i) = dstIdx; }
           // 5. 旧遷移先ノードの base, check, data をリセット
           base(srcIdx)  = 1;
