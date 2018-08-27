@@ -102,19 +102,18 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
       val currBase = base(currIdx);
       val tmpNextIdx = currBase + currChar;
       if (tmpNextIdx < size && check(tmpNextIdx) != 0) { // 衝突時
-        // 1. currIdx から遷移しているすべてのノード(遷移先ノード)を取得 (index, char)
+        // 1. currIdx から遷移しているすべてのノード(遷移先ノード)を取得 (charCode)
         val nextNodes = (currBase until Math.min(PrefixTree.CHAR_MAX + currBase, size)).
-          foldLeft(List[(Int, Int)]()) { (xs, i) =>
-            if (check(i) == currIdx) (i, i - currBase) :: xs else xs
+          foldLeft(List[Int]()) { (xs, i) =>
+            if (check(i) == currIdx) i - currBase :: xs else xs
           }
 
         // 2. 遷移先ノードと currChar が遷移可能なbaseを求める
-        val newBase = findNewBase((-1, currChar) :: nextNodes);
+        val newBase = findNewBase(currChar :: nextNodes);
         base(currIdx) = newBase;
 
-        nextNodes.foreach { e =>
-          val srcIdx  = e._1;
-          val srcChar = e._2;
+        nextNodes.foreach { srcChar =>
+          val srcIdx  = srcChar + currBase;
           val srcBase = base(srcIdx);
           val dstIdx  = base(currIdx) + srcChar; // 遷移先ノードの新しいインデックス
           // 3. 遷移先ノードを新しい base で計算した index にコピー
@@ -148,30 +147,30 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
   /**
    * すべての遷移先ノードを配置可能な base を求める
    *
-   * @param nextNodes 遷移先ノードの配列 (index, charCode)
+   * @param nextNodes 遷移先ノードの配列 (charCode)
    * @return すべての遷移先ノードを配置可能な base
    */
-  private def findNewBase(nextNodes: List[(Int, Int)]): Int = {
-    def go(b: Int, ns: List[(Int, Int)]): Int = {
-      ns match {
+  private def findNewBase(nextNodes: List[Int]): Int = {
+    def go(b: Int, rest: List[Int], origin: List[Int]): Int = {
+      rest match {
         case Nil => b;
-        case (_, char) :: rest => {
+        case char :: cs => {
           val newIdx = b + char;
           if (newIdx < size) {
             if (check(newIdx) == 0) {
-              go(b, rest);
+              go(b, cs, origin);
             } else {
-              go(b + 1, nextNodes);
+              go(b + 1, origin, origin);
             }
           } else {
             // newIdx が配列のサイズ以上になってしまった場合は配列を拡張
             extendsArray(newIdx);
-            go(b, rest);
+            go(b, cs, origin);
           }
         }
       }
     }
-    go(1, nextNodes);
+    go(1, nextNodes, nextNodes);
   }
 
   /**
