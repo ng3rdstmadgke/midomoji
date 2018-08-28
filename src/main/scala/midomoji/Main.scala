@@ -52,12 +52,18 @@ object Main {
         val dictDir = argMap("dict-dir");
         var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](Util.dictBin(dictDir));
         val exists = (elem: Array[Int], es: Array[Array[Int]]) => es.exists(e => elem.sameElements(e));
+        val start = System.currentTimeMillis;
         PrefixTree.check[Array[Int]](prefixtree, Util.morphemeTsv(dictDir))(parse)(exists);
+        val end = System.currentTimeMillis;
+        println("time(ms) : " + (end - start));
       }
       case ("check-matrix", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
         val matrix = Util.kryoDeserialize[Matrix](Util.matrixBin(dictDir));
+        val start = System.currentTimeMillis;
         Matrix.check(matrix, Util.matrixTsv(dictDir));
+        val end = System.currentTimeMillis;
+        println("time(ms) : " + (end - start));
       }
       case ("analyze", argMap) => {
         val prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Array[Int]]](Util.dictBin());
