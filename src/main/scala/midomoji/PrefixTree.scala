@@ -99,51 +99,43 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
     var (currIdx, keyIdx) = findFaildPoint(key);
     for (i <- (keyIdx until key.length)) {
       val currChar = key(i).toInt;
-      val hasNextNode = base(currIdx);
-      val currBase = if (base(currIdx) == 0) 1 else base(currIdx);
-      base(currIdx) = currBase;
-      val tmpNextIdx = currBase + currChar;
-      if (tmpNextIdx < size && check(tmpNextIdx) != 0) { // 衝突時
-        if (hasNextNode == 0) {
-          // 遷移先ノードがない場合
-          val newBase = findNewBase(currChar);
-          base(currIdx) = newBase;
-        } else {
-          // 遷移先ノードがある場合
-          // 1. currIdx から遷移しているすべてのノード(遷移先ノード)を取得 (charCodeのリストを作る)
-          val nextNodes = (currBase until Math.min(PrefixTree.CHAR_MAX + currBase, size)).
-            foldLeft(List[Int]()) { (xs, i) =>
-              if (check(i) == currIdx) i - currBase :: xs else xs
-            }
-          // 2. 遷移先ノードと currChar が遷移可能なbaseを求める
-          val newBase = findNewBase(currChar :: nextNodes);
-          base(currIdx) = newBase;
-
-          nextNodes.foreach { srcChar =>
-            val srcIdx  = srcChar + currBase;
-            val srcBase = base(srcIdx);
-            val dstIdx  = base(currIdx) + srcChar; // 遷移先ノードの新しいインデックス
-            // 3. 遷移先ノードを新しい base で計算した index にコピー
-            base(dstIdx)  = base(srcIdx);
-            check(dstIdx) = check(srcIdx);
-            data(dstIdx)  = data(srcIdx);
-            // 4. 旧遷移先ノードから更に遷移しているノードの check を新遷移先ノードの index で更新
-            (srcBase until Math.min(srcBase + PrefixTree.CHAR_MAX, size)).
-              foreach { i => if (check(i) == srcIdx) check(i) = dstIdx; }
-            // 5. 旧遷移先ノードの base, check, data をリセット
-            base(srcIdx)  = 0;
-            check(srcIdx) = 0;
-            data(srcIdx)  = stackNone;
+      val tmpNextIdx = base(currIdx) + currChar;
+      if (base(currIdx) == 0) {            // 遷移先ノードが存在しない場合
+        val newBase = findNewBase(currChar);
+        base(currIdx) = newBase;
+      } else if (tmpNextIdx >= size) {     // 遷移先インデックスが配列のサイズを超過したとき
+        extendsArray(tmpNextIdx);
+      } else if (check(tmpNextIdx) != 0) { // 衝突時
+        val currBase = base(currIdx);
+        // 遷移先ノードがある場合
+        // 1. currIdx から遷移しているすべてのノード(遷移先ノード)を取得 (charCodeのリストを作る)
+        val nextNodes = (currBase until Math.min(PrefixTree.CHAR_MAX + currBase, size)).
+          foldLeft(List[Int]()) { (xs, i) =>
+            if (check(i) == currIdx) i - currBase :: xs else xs
           }
-        }
+        // 2. 遷移先ノードと currChar が遷移可能なbaseを求める
+        val newBase = findNewBase(currChar :: nextNodes);
+        base(currIdx) = newBase;
 
+        nextNodes.foreach { srcChar =>
+          val srcIdx  = srcChar + currBase;
+          val srcBase = base(srcIdx);
+          val dstIdx  = base(currIdx) + srcChar; // 遷移先ノードの新しいインデックス
+          // 3. 遷移先ノードを新しい base で計算した index にコピー
+          base(dstIdx)  = base(srcIdx);
+          check(dstIdx) = check(srcIdx);
+          data(dstIdx)  = data(srcIdx);
+          // 4. 旧遷移先ノードから更に遷移しているノードの check を新遷移先ノードの index で更新
+          (srcBase until Math.min(srcBase + PrefixTree.CHAR_MAX, size)).
+            foreach { i => if (check(i) == srcIdx) check(i) = dstIdx; }
+          // 5. 旧遷移先ノードの base, check, data をリセット
+          base(srcIdx)  = 0;
+          check(srcIdx) = 0;
+          data(srcIdx)  = stackNone;
+        }
       }
       // currChar のノードを追加
       val nextIdx = base(currIdx) + currChar;
-      // nextIdx が配列のサイズ以上になってしまった場合は配列を拡張
-      if (nextIdx >= size) {
-        extendsArray(nextIdx);
-      }
       base(nextIdx)  = 0;
       check(nextIdx) = currIdx;
       currIdx = nextIdx;
