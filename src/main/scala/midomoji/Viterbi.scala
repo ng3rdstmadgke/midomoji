@@ -6,7 +6,7 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
     val lattice = buildLattice(text);
     val largeCost = 1000000000;
     var reachEos = false;
-    val dummy = new LatticeNode("DUMMY", -1, -1, -1, -1, -1, -2);
+    val dummy = new LatticeNode(-1, -1, -1, -1, -1, -1, -1, -2);
     def go(node: LatticeNode): Int = {
       if (node.nextIdx == -1) {
         reachEos = true;
@@ -38,8 +38,9 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
     val len = text.length;
     // Indexは1スタート
     val lattice = Array.fill[List[LatticeNode]](len + 2)(Nil);
-    val bos   = new LatticeNode("BOS", 0, 0, 0, -1, -1, 1);
-    val eos   = new LatticeNode("EOS", 0, 0, 0, -1, -1, -1);
+    // startIdx, endIdx, leftId, rightId, genCost, posId, id, nextIdx
+    val bos   = new LatticeNode(-1 , 0      , 0, 0, 0, -1, -1, 1);
+    val eos   = new LatticeNode(len, len + 1, 0, 0, 0, -1, -1, -1);
     lattice(0) = List(bos);
     lattice(len + 1) = List(eos);
     // ---- ---- ---- 辞書の単語を追加 ---- ---- ----
@@ -48,16 +49,17 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
       val latticeIdx = i + 1;
       prefixtree.prefixSearch(subText).foreach { result =>
         val (surface, tokens) = result;
-        val nextLatticeIdx = latticeIdx + surface.length;
+        val surfaceLen     = surface.length;
+        val nextLatticeIdx = latticeIdx + surfaceLen;
         lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
           val Array(leftId, rightId, genCost, posId, id, _*) = token;
-          new LatticeNode(surface, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
+          new LatticeNode(i, i + surfaceLen, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
         }
       }
     }
     // ---- ---- ---- 未知語を追加 ---- ---- ----
     val groupTokens = (0 until charType.charTypeNum).toArray.map{ i =>
-      new GroupToken(-1, -1, new StringBuilder(), charType.getTokenConfig(i));
+      new GroupToken(-1, -1, charType.getTokenConfig(i));
     }
     var i = 0;
     while (i < len) {
@@ -66,14 +68,14 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
       if (char.isSurrogate) {
         val nextIdx = i + 1;
         if (char.isHighSurrogate && nextIdx < len && text(nextIdx).isLowSurrogate) {
-          val surface = "" + char + text(nextIdx);
           val nextLatticeIdx = i + 3;
+          val endIdx = i + 2;
           // 現状サロゲートペアの文字種はからなずDEFAULT
           val TokenConfig(charTypeId, charTypeName, forceUnigram, groupToken, ngram, tokens) = charType.getTokenConfig(0);
           if (forceUnigram || !prefixtree.exists(char)) {
             lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
               val Array(leftId, rightId, genCost, posId, id, _*) = token;
-              new LatticeNode(surface, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
+              new LatticeNode(i, endIdx, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
             }
           }
           i += 2;
@@ -87,11 +89,11 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
           val TokenConfig(charTypeId, charTypeName, forceUnigram, groupToken, ngram, tokens) = tokenConfig;
           // unigramトークン生成
           if (forceUnigram || !prefixtree.exists(char)) {
-            val surface    = str;
             val nextLatticeIdx = i + 2;
+            val endIdx = i + 1;
             lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
               val Array(leftId, rightId, genCost, posId, id, _*) = token;
-              new LatticeNode(str, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
+              new LatticeNode(i, endIdx, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
             }
           }
           // ngramトークン生成
@@ -102,12 +104,13 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
             (startIdx until endIdx).exists { nextIdx =>
               val nextChar   = text(nextIdx);
               val nextLatticeIdx = nextIdx + 2;
+              val endIdx = nextIdx + 1;
               surface += nextChar;
               if (charType.typeIs(nextChar, charTypeId) && !prefixtree.exists(surface)) {
                 lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
                   val Array(leftId, rightId, genCost, posId, id, _*) = token;
                   val optimizedGenCost = if (surface.length > 3) genCost * (100 + 10 * surface.length) / 100 else genCost;
-                  new LatticeNode(surface, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
+                  new LatticeNode(i, endIdx, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
                 }
                 false;
               } else {
@@ -119,25 +122,24 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
           if (groupToken) {
             val gtoken = groupTokens(charTypeId);
             if (gtoken.isEmpty) { // groupToken が空の場合
-              gtoken.init(i, char);
+              gtoken.init(i);
             } else {                  // groupToken に作りかけのトークンが存在する場合
               if (gtoken.isNext(i)) {
                 // 同一の文字種が連続していた場合
-                gtoken.add(char);
+                gtoken.add();
               } else if (gtoken.shouldCreateToken) {
                 // 直前の文字が異なる文字種でトークンを作る必要がある場合
                 val latticeIdx     = gtoken.startIdx + 1;
-                val nextLatticeIdx = gtoken.endIdx + 2;
+                val nextLatticeIdx = gtoken.endIdx   + 1;
                 lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-                  val surface = gtoken.surface.toString;
                   val Array(leftId, rightId, genCost, posId, id, _*) = token;
-                  val optimizedGenCost = if (surface.length > 3) genCost * (100 + 10 * surface.length) / 100 else genCost;
-                  new LatticeNode(surface, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
+                  val optimizedGenCost = if (gtoken.length > 3) genCost * (100 + 10 * gtoken.length) / 100 else genCost;
+                  new LatticeNode(gtoken.startIdx, gtoken.endIdx, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
                 }
-                gtoken.init(i, char);
+                gtoken.init(i);
               } else {
                 // 直前の文字が異なる文字種でトークンを作る必要がない場合
-                gtoken.init(i, char);
+                gtoken.init(i);
               }
             }
           }
@@ -149,12 +151,11 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
     groupTokens.foreach { gtoken =>
       if (!gtoken.isEmpty && gtoken.shouldCreateToken) {
         val latticeIdx     = gtoken.startIdx + 1;
-        val nextLatticeIdx = gtoken.endIdx + 2;
+        val nextLatticeIdx = gtoken.endIdx   + 1;
         lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-          val surface = gtoken.surface.toString;
           val Array(leftId, rightId, genCost, posId, id, _*) = token;
-          val optimizedGenCost = if (surface.length > 3) genCost * (100 + 10 * surface.length) / 100 else genCost;
-          new LatticeNode(surface, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
+          val optimizedGenCost = if (gtoken.length > 3) genCost * (100 + 10 * gtoken.length) / 100 else genCost;
+          new LatticeNode(gtoken.startIdx, gtoken.endIdx, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
         }
       }
     }
@@ -168,23 +169,20 @@ object Viterbi {
   }
 }
 
-class GroupToken(var startIdx: Int, var endIdx: Int, var surface: StringBuilder, val tokenConfig: TokenConfig) {
-  def isEmpty: Boolean = startIdx == -1 && endIdx == -1;
-  def isNext(idx: Int): Boolean = endIdx + 1 == idx;
-  def shouldCreateToken: Boolean = {
-    val len = surface.length;
-    tokenConfig.groupToken && len > 1 && len > tokenConfig.ngram;
-  }
+class GroupToken(var startIdx: Int, var endIdx: Int, val tokenConfig: TokenConfig) {
+  var length = 0;
+  def isEmpty: Boolean = length == 0;
+  def isNext(idx: Int): Boolean = endIdx == idx;
+  def shouldCreateToken: Boolean =  tokenConfig.groupToken && length > 1 && length > tokenConfig.ngram;
 
-  def init(currIdx: Int, char: Char): Unit = {
+  def init(currIdx: Int): Unit = {
     startIdx = currIdx;
-    endIdx   = currIdx;
-    surface.setLength(0);
-    surface.append(char);
+    endIdx   = currIdx + 1;
+    length = 1;
   }
 
-  def add(char: Char): Unit = {
+  def add(): Unit = {
     endIdx += 1;
-    surface.append(char);
+    length += 1;
   }
 }

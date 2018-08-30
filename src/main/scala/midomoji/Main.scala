@@ -154,10 +154,11 @@ object Main {
         case "analyze" :: text :: xs => {
           val midomoji = new Midomoji(prefixtree, matrix, charType);
           val str = midomoji.analyze(text).map { n =>
+            val surface = text.slice(n.startIdx, n.endIdx);
             val pos = posInfo.getPos(n.posId);
-            val base = metaInfo.getBaseForm(n.id, n.surface);
-            val yomi = metaInfo.getYomi(n.id, n.surface);
-            "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(n.surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
+            val base = metaInfo.getBaseForm(n.id, surface);
+            val yomi = metaInfo.getYomi(n.id, surface);
+            "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
           }
           println("BOS\n" + str.mkString("\n") + "\nEOS\n");
         }
