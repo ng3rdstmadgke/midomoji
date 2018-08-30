@@ -34,8 +34,33 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
     if (reachEos) Some(bos) else None;
   }
 
+  def addDictToken(text: String, offset: Int     , len: Int         , lattice: Array[List[LatticeNode]],
+                   size: Int   , base: Array[Int], check: Array[Int], data: Array[Array[Array[Int]]]): Unit = {
+    val latticeIdx = offset + 1;
+    var currIdx = 1;
+    var seek = offset;
+    while (seek < len) {
+      val nextIdx = base(currIdx) + text(seek);
+      if (nextIdx < size && currIdx == check(nextIdx)) {
+        if (data(nextIdx) != null) {
+          val endIdx         = seek + 1;
+          val nextLatticeIdx = seek + 2;
+          lattice(latticeIdx) = data(nextIdx).foldLeft(lattice(latticeIdx)) { (nodes, token) =>
+            val Array(leftId, rightId, genCost, posId, id, _*) = token;
+            new LatticeNode(offset, endIdx, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
+          }
+        }
+        currIdx = nextIdx;
+        seek += 1;
+      } else {
+        return ();
+      }
+    }
+  }
+
   def buildLattice(text: String): Array[List[LatticeNode]] = {
     val len = text.length;
+    val (size, base, check, data) = prefixtree.getFields;
     // Indexは1スタート
     val lattice = Array.fill[List[LatticeNode]](len + 2)(Nil);
     // startIdx, endIdx, leftId, rightId, genCost, posId, id, nextIdx
@@ -44,18 +69,8 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
     lattice(0) = List(bos);
     lattice(len + 1) = List(eos);
     // ---- ---- ---- 辞書の単語を追加 ---- ---- ----
-    (0 until len).foreach { i =>
-      val subText  = text.slice(i, len);
-      val latticeIdx = i + 1;
-      prefixtree.prefixSearch(subText).foreach { result =>
-        val (surface, tokens) = result;
-        val surfaceLen     = surface.length;
-        val nextLatticeIdx = latticeIdx + surfaceLen;
-        lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-          val Array(leftId, rightId, genCost, posId, id, _*) = token;
-          new LatticeNode(i, i + surfaceLen, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
-        }
-      }
+    (0 until len).foreach { offset =>
+      addDictToken(text, offset, len, lattice, size, base, check, data);
     }
     // ---- ---- ---- 未知語を追加 ---- ---- ----
     val groupTokens = (0 until charType.charTypeNum).toArray.map{ i =>
