@@ -7,24 +7,17 @@ import java.nio.charset.StandardCharsets;
 class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
                private[this] val matrix: Matrix,
                private[this] val charType: CharType) {
-  private[this] val viterbi = new Viterbi(prefixtree, matrix, charType);
+  private[this] val lattice = new Lattice(prefixtree, charType, matrix);
 
-  def analyze(text: String): LatticeNode = {
-    val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
-    val bos = viterbi.analyze(normalized);
-    if (bos == None) {
-      throw new RuntimeException("ノードが途中で途切れました (" + text + ")");
-    } else {
-      bos.get;
-    }
-  }
-
-  def analyzeInput(is: InputStream, os: OutputStream, bs: Int = 8192)(nodeToString: LatticeNode => String): Unit = {
+  def analyzeInput(is: InputStream, os: OutputStream, bs: Int = 8192)(nodeToString: (String, LatticeIterator) => String): Unit = {
     Using[BufferedReader, Unit](new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8), bs)) { br =>
       Using[BufferedWriter, Unit](new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), bs)) { bw =>
         var line = br.readLine();
+        val sLattice = lattice;
         while (line != null) {
-          bw.write(nodeToString(analyze(line)));
+          val normalized = Normalizer.normalize(line, Normalizer.Form.NFKC);
+          val output = nodeToString(normalized, sLattice.analyze(normalized));
+          bw.write(output);
           line = br.readLine();
         }
         bw.flush();
@@ -34,7 +27,7 @@ class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
 }
 
 object Midomoji {
-  def format(fmt: String): LatticeNode => String = {
+  def format(fmt: String): (String, LatticeIterator) => String = {
     fmt match {
       case "wakati"      => wakati;
       case "detail"      => detail();
@@ -43,31 +36,43 @@ object Midomoji {
     }
   }
 
-  def simple(nodes: LatticeNode): String = {
-    val str = nodes.map(n => "%s\t%d\t%d\t%d".format(n.surface, n.leftId, n.rightId, n.genCost));
+  def simple(text: String, nodes: LatticeIterator): String = {
+    val str = nodes.map { n =>
+      val Array(startIdx, endIdx, leftId, rightId, genCost, posId, id, totalCost, nextNodeIdx) = n;
+      val surface = text.slice(startIdx, endIdx);
+      "%s\t%d\t%d\t%d".format(surface, leftId, rightId, genCost);
+    };
     "BOS\n" + str.mkString("\n") + "\nEOS\n";
   }
 
-  def wakati(nodes: LatticeNode): String = {
-    nodes.map(_.surface).mkString(" ") + "\n";
+  def wakati(text: String, nodes: LatticeIterator): String = {
+    nodes.map( n => text.slice(n(0), n(1))).mkString(" ") + "\n";
   }
 
-  def detail(): LatticeNode => String = {
+  def detail(): (String, LatticeIterator) => String = {
     val posInfo  = Util.kryoDeserializeFromResource[PosInfo](Util.posInfoBin());
     val metaInfo = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
-    nodes: LatticeNode => {
+    (text: String, nodes: LatticeIterator) => {
       val str = nodes.map { n =>
-        val pos = posInfo.getPos(n.posId);
-        val base = metaInfo.getBaseForm(n.id, n.surface);
-        val yomi = metaInfo.getYomi(n.id, n.surface);
-        "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(n.surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
+        val Array(startIdx, endIdx, leftId, rightId, genCost, posId, id, totalCost, nextNodeIdx) = n;
+        val surface = text.slice(startIdx, endIdx);
+        val pos = posInfo.getPos(posId);
+        val base = metaInfo.getBaseForm(id, surface);
+        val yomi = metaInfo.getYomi(id, surface);
+        "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(surface, leftId, rightId, genCost, pos, base, yomi);
       }
       "BOS\n" + str.mkString("\n") + "\nEOS\n";
     }
   }
 
-  def wakatiBase(): LatticeNode => String = {
+  def wakatiBase(): (String, LatticeIterator) => String = {
     val metaInfo = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
-    nodes: LatticeNode => nodes.map(n => metaInfo.getBaseForm(n.id, n.surface)).mkString(" ") + "\n";
+    (text: String, nodes: LatticeIterator) => {
+      nodes.map {n =>
+        val Array(startIdx, endIdx, leftId, rightId, genCost, posId, id, totalCost, nextNodeIdx) = n;
+        val surface = text.slice(startIdx, endIdx);
+        metaInfo.getBaseForm(id, surface)
+      }.mkString(" ") + "\n";
+    }
   }
 }

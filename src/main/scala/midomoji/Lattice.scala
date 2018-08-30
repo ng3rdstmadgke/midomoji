@@ -5,19 +5,31 @@ import scala.collection.Iterable;
 import scala.collection.AbstractIterator;
 
 class LatticeIterator(val lattice: Array[ArrayBuffer[Array[Int]]]) extends AbstractIterator[Array[Int]] {
-  var node = lattice(0)(0);
+  val bosNextIdx  = lattice(0)(0)(8);
+  var node = lattice(1)(bosNextIdx);
+
   override def next(): Array[Int] = {
     val ret = node;
-    node = lattice(node(1) + 1)(node(8));
+    val nextIdx     = node(1) + 1;
+    val nextNodeIdx = node(8);
+    node = lattice(nextIdx)(nextNodeIdx);
     ret;
   }
-  override def hasNext: Boolean = if (node(8) > 0) true else false;
+
+  override def hasNext: Boolean = {
+    val nextNodeIdx = node(8);
+    if (nextNodeIdx < 0) false else true;
+  }
 }
 
-class Lattice(private[this] val prefixtree: PrefixTree[Array[Array[Int]]], private[this] val charType: CharType, private[this] val matrix: Matrix) {
+class Lattice(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
+              private[this] val charType: CharType,
+              private[this] val matrix: Matrix) {
   private[this] var lattice = Array[ArrayBuffer[Array[Int]]]();
   private[this] val (treeSize, base, check, data) = prefixtree.getFields;
   private[this] val groupTokens = (0 until charType.charTypeNum).toArray.map{i => new GroupToken(-1, -1, charType.getTokenConfig(i))};
+
+  def getLattice(): Array[ArrayBuffer[Array[Int]]] = lattice;
 
   def analyze(text: String): LatticeIterator = {
     def go(node: Array[Int], sLattice: Array[ArrayBuffer[Array[Int]]], sMatrix: Matrix): Int = {
@@ -56,9 +68,9 @@ class Lattice(private[this] val prefixtree: PrefixTree[Array[Array[Int]]], priva
     val len = text.length;
     lattice = Array.fill[ArrayBuffer[Array[Int]]](len + 2)(ArrayBuffer());
     val sLattice = lattice;
-    //                   Array(startIdx, endIdx , leftId, rightId, genCost, posId, id, totalCost, nextNodeIdx)
     // nextNodeIdx : -1 = 未計算, -2 = 遷移先ノードがない, -3 = eosノード
-    sLattice(0)       += Array(0       , 0 + 1  , 0     , 0      , 0      , -1   , -1, 0        , -1);
+    //                   Array(startIdx, endIdx , leftId, rightId, genCost, posId, id, totalCost, nextNodeIdx)
+    sLattice(0)       += Array(-1      , 0      , 0     , 0      , 0      , -1   , -1, 0        , -1);
     sLattice(len + 1) += Array(len     , len + 1, 0     , 0      , 0      , -1   , -1, 0        , -3);
     var offset  = 0;
     groupTokens.foreach(_.init());
@@ -106,7 +118,7 @@ class Lattice(private[this] val prefixtree: PrefixTree[Array[Array[Int]]], priva
         gtoken.gettokenConfig.tokens.foreach { token =>
           val len = gtoken.getEndIdx - gtoken.getStartIdx;
           val genCost = if (len > 3) token(2) * (100 + 10 * len) / 100 else token(2);
-          lattice(latticeIdx) += Array(offset, offset + 2, token(0), token(1), genCost, token(3), token(4), 0, -1);
+          lattice(latticeIdx) += Array(gtoken.getStartIdx, gtoken.getEndIdx, token(0), token(1), genCost, token(3), token(4), 0, -1);
         }
       }
     }
@@ -114,7 +126,7 @@ class Lattice(private[this] val prefixtree: PrefixTree[Array[Array[Int]]], priva
 
   def addUnigramToken(text: String, offset: Int, forceUnigram: Boolean, tokens: Array[Array[Int]]): Unit = {
     val sLattice = lattice;
-    val exists = inPrefixtree(text, offset, 1);
+    val exists = inPrefixtree(text, offset, offset + 1);
     val latticeIdx = offset + 1;
     if (forceUnigram || !exists) {
       tokens.foreach { token =>
@@ -130,9 +142,10 @@ class Lattice(private[this] val prefixtree: PrefixTree[Array[Array[Int]]], priva
     if (ngram > 1) {
       val startIdx = offset + 1;
       val endIdx   = Math.min(text.length, offset + ngram);
+      var cnt      = 1;
       (startIdx until endIdx).foreach { nextIdx =>
         val nextChar   = text(nextIdx);
-        val exists     = inPrefixtree(text, offset, nextIdx);
+        val exists     = inPrefixtree(text, offset, nextIdx + 1);
         if (charType.typeIs(nextChar, charTypeId) && !exists) {
           tokens.foreach { token =>
             // val Array(leftId, rightId, genCost, posId, id, _*) = token;
@@ -175,11 +188,11 @@ class Lattice(private[this] val prefixtree: PrefixTree[Array[Array[Int]]], priva
     }
   }
 
-  def inPrefixtree(text: String, offset: Int, length: Int): Boolean = {
+  def inPrefixtree(text: String, startIdx: Int, endIdx: Int): Boolean = {
     val sBase = base; val sCheck = check; val sData = data;
     var currIdx = 1;
-    var seek    = offset;
-    val end     = offset + length;
+    var seek    = startIdx;
+    val end     = Math.min(endIdx, text.length);
     while (seek < end) {
       val nextIdx = sBase(currIdx) + text(seek);
       if (currIdx != sCheck(nextIdx)) {

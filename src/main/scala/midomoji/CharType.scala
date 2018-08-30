@@ -16,7 +16,9 @@ case class TokenConfig(charTypeId: Int, charTypeName: String, forceUnigram: Bool
   def this() = this(0, "", false, false, 0, Array[Array[Int]]());
 }
 
-class CharType(private[this] val charTypeMap: Array[Array[Int]], private[this] val tokenConfigSet: Array[TokenConfig], private[this] val codePointMap: HashMap[(Int, Int), Array[Int]]) extends Serializable {
+class CharType(private[this] val charTypeMap   : Array[Array[Int]],
+               private[this] val tokenConfigSet: Array[TokenConfig],
+               private[this] val codePointMap  : HashMap[(Int, Int), Array[Int]]) extends Serializable {
   val charTypeNum = tokenConfigSet.length;
 
   def this() = this(Array[Array[Int]](), Array[TokenConfig](), HashMap[(Int, Int), Array[Int]]());

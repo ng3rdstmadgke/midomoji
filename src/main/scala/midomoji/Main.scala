@@ -141,23 +141,28 @@ object Main {
           }
         }
         case "tokenize" :: text :: xs => {
-          val len = text.length;
-          val tokenizer = new Tokenizer[Array[Array[Int]]](charType, prefixtree);
-          val lattice = tokenizer.tokenize(text, Array.fill[List[LatticeNode]](len + 2)(Nil));
-          println("0 : BOS");
-          (1 to len).foreach { i =>
-            println("%d : ".format(i));
-            lattice(i).foreach(println(_));
+          val lattice = new Lattice(prefixtree, charType, matrix);
+          lattice.build(text);
+          lattice.getLattice().zipWithIndex.foreach { elem =>
+            val (nodes, idx) = elem;
+            println("[" + idx + "] : ");
+            val str = nodes.map { n =>
+              val Array(startIdx, endIdx, leftId, rightId, genCost, posId, id, totalCost, nextNodeIdx) = n;
+              val unk = if (id == -1) " (未)" else "";
+              "  (" + n.mkString(",") + ") : " + text.slice(startIdx, endIdx) + unk;
+            }.mkString("\n");
+            println(str);
           }
-          println("%d : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
-          val midomoji = new Midomoji(prefixtree, matrix, charType);
-          val str = midomoji.analyze(text).map { n =>
-            val pos = posInfo.getPos(n.posId);
-            val base = metaInfo.getBaseForm(n.id, n.surface);
-            val yomi = metaInfo.getYomi(n.id, n.surface);
-            "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(n.surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
+          val lattice = new Lattice(prefixtree, charType, matrix);
+          val str = lattice.analyze(text).map { n =>
+            val Array(startIdx, endIdx, leftId, rightId, genCost, posId, id, totalCost, nextNodeIdx) = n;
+            val surface = text.slice(startIdx, endIdx);
+            val pos = posInfo.getPos(posId);
+            val base = metaInfo.getBaseForm(id, surface);
+            val yomi = metaInfo.getYomi(id, surface);
+            "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(surface, leftId, rightId, genCost, pos, base, yomi);
           }
           println("BOS\n" + str.mkString("\n") + "\nEOS\n");
         }
