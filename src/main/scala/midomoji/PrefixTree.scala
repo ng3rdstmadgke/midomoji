@@ -16,7 +16,7 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
    * @return key に対応するデータ
    */
   def convertDataType[C](convert: A => C)(implicit c: ClassTag[C]): PrefixTree[C] = {
-    optimize;
+    optimize2;
     val newData = c.newArray(size);
     val currData = data;
     (0 until size).foreach ( i => newData(i) = convert(currData(i)));
@@ -214,8 +214,12 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
     lastIdx match {
       case None    => changeSize(2);
       case Some(i) => changeSize(i + 1);
-
     }
+  }
+
+  def optimize2(): Unit = {
+    val maxBase = base.foldLeft(1) {(max, v) => if (max > v) max else v};
+    changeSize(maxBase + Char.MaxValue);
   }
 
   private def changeSize(newSize: Int): Unit = {
