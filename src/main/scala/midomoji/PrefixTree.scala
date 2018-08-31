@@ -64,12 +64,14 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
    * @param key
    * @return 登録されていればtrue, そうでなければfalse
    */
-  def exists(key: String): Boolean = {
+  def exists(text: String, startIdx: Int, endIdx: Int): Boolean = {
     var currIdx = 1;
-    for (char <- key) {
-      val nextIdx = base(currIdx) + char.toInt;
+    var seek    = startIdx;
+    while (seek < endIdx) {
+      val nextIdx = base(currIdx) + text(seek);
       if (nextIdx < size && check(nextIdx) == currIdx) {
         currIdx = nextIdx;
+        seek += 1;
       } else {
         return false;
       }

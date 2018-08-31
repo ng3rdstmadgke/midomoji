@@ -142,12 +142,16 @@ object Main {
         }
         case "tokenize" :: text :: xs => {
           val len = text.length;
-          val tokenizer = new Tokenizer[Array[Array[Int]]](charType, prefixtree);
-          val lattice = tokenizer.tokenize(text, Array.fill[List[LatticeNode]](len + 2)(Nil));
+          val viterbi = new Viterbi(prefixtree, matrix, charType);
+          val lattice = viterbi.buildLattice(text);
           println("0 : BOS");
           (1 to len).foreach { i =>
-            println("%d : ".format(i));
-            lattice(i).foreach(println(_));
+            println("[%d] : ".format(i));
+            lattice(i).foreach { n =>
+              val surface = text.slice(n.startIdx, n.endIdx);
+              val unk     = if (n.id == -1) " (未)" else "";
+              println("  " + n + "\t: "  + surface + unk);
+            }
           }
           println("%d : EOS".format(len + 1));
         }
