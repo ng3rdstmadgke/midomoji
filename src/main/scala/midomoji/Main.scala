@@ -156,8 +156,8 @@ object Main {
           println("%d : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
-          val midomoji = new Midomoji(prefixtree, matrix, charType);
-          val str = midomoji.analyze(text).map { n =>
+          val viterbi = new Viterbi(prefixtree, matrix, charType);
+          val str = viterbi.analyze(text).map { n =>
             val surface = text.slice(n.startIdx, n.endIdx);
             val pos = posInfo.getPos(n.posId);
             val base = metaInfo.getBaseForm(n.id, surface);

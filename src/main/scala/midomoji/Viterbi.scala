@@ -1,39 +1,60 @@
 package com.github.ng3rdstmadgke.midomoji;
 
-class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix, val charType: CharType) {
+/**
+ * ラティス構造を構築し、解析するクラス
+ *
+ * @param prefixtree トライ木オブジェクト
+ * @param matrix     連接コスト表オブジェクト
+ * @param charType   文字種設定オブジェクト
+ */
+class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
+              private[this] val matrix: Matrix,
+              private[this] val charType: CharType) {
 
-  def analyze(text: String): Option[LatticeNode] = {
+  /**
+   * ラティス構造を解析するメソッド
+   *
+   * @param text    解析対象の文字列
+   * @return 解析後のラティス構造のBOSノード
+   */
+  def analyze(text: String): LatticeNode = {
     val lattice = buildLattice(text);
-    val largeCost = 1000000000;
-    var reachEos = false;
-    val dummy = new LatticeNode(-1, -1, -1, -1, -1, -1, -1, -2);
-    def go(node: LatticeNode): Int = {
-      if (node.nextIdx == -1) {
-        reachEos = true;
-        node.totalCost;
-      } else if (node.nextNode != null) {
-        node.totalCost;
-      } else {
-        var minCost = largeCost;
-        var minNode = dummy;
-        for (nextNode <- lattice(node.nextIdx)) {
-          val nextTotalCost = go(nextNode);
-          val totalCost = nextTotalCost + node.genCost + matrix.getCost(node.rightId, nextNode.leftId);
+    val sMatrix = matrix;
+    var i = text.length;
+    while(i >= 0) {
+      for (curr <- lattice(i)) {
+        val nextIdx = curr.endIdx + 1;
+        val genCost = curr.genCost;
+        val rightId = curr.rightId;
+        var minCost = 1000000000;
+        var minNode: LatticeNode = null;
+        for (next <- lattice(nextIdx)) {
+          val totalCost = next.totalCost + genCost + sMatrix.getCost(rightId, next.leftId);
           if (totalCost < minCost) {
             minCost = totalCost;
-            minNode = nextNode;
+            minNode = next;
           }
         }
-        node.totalCost = minCost;
-        node.nextNode  = minNode;
-        minCost;
+        curr.totalCost = minCost;
+        curr.nextNode  = minNode;
       }
+      i -= 1;
     }
-    val bos = lattice(0).head;
-    go(bos);
-    if (reachEos) Some(bos) else None;
+    lattice(0).head; // BOS
   }
 
+  /**
+   * トライ木に登録されているトークンをラティス構造に追加する
+   *
+   * @param text    解析対象の文字列
+   * @param offseta textのseek開始インデックス
+   * @param len     textの長さ
+   * @param lattice ラティス構造
+   * @param size    トライ木の配列サイズ
+   * @param base    トライ木のbase
+   * @param check   トライ木のcheck
+   * @param data    トライ木のdata
+   */
   def addDictToken(text: String, offset: Int     , len: Int         , lattice: Array[List[LatticeNode]],
                    size: Int   , base: Array[Int], check: Array[Int], data: Array[Array[Array[Int]]]): Unit = {
     val latticeIdx = offset + 1;
@@ -44,10 +65,9 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
       if (nextIdx < size && currIdx == check(nextIdx)) {
         if (data(nextIdx) != null) {
           val endIdx         = seek + 1;
-          val nextLatticeIdx = seek + 2;
           lattice(latticeIdx) = data(nextIdx).foldLeft(lattice(latticeIdx)) { (nodes, token) =>
             val Array(leftId, rightId, genCost, posId, id, _*) = token;
-            new LatticeNode(offset, endIdx, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
+            new LatticeNode(offset, endIdx, leftId, rightId, genCost, posId, id) :: nodes;
           }
         }
         currIdx = nextIdx;
@@ -58,6 +78,12 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
     }
   }
 
+  /**
+   * ラティス構造を構築するメソッド
+   *
+   * @param text    解析対象の文字列
+   * @return ラティス構造オブジェクト
+   */
   def buildLattice(text: String): Array[List[LatticeNode]] = {
     val len = text.length;
     val (size, base, check, data) = prefixtree.getFields;
@@ -69,22 +95,22 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
     val groupTokens = (0 until charType.charTypeNum).toArray.map{ i => new GroupToken(-1, -1, charType.getTokenConfig(i)); }
     var i = 0;
     while (i < len) {
-      // ---- ---- ---- 辞書の単語を追加 ---- ---- ----
+      // ==== ==== ==== 辞書の単語を追加 ==== ==== ====
       addDictToken(text, i, len, lattice, size, base, check, data);
-      // ---- ---- ---- 未知語を追加 ---- ---- ----
+      // ==== ==== ==== 未知語を追加 ==== ==== ====
       val char = text(i);
       val latticeIdx = i + 1;
       if (char.isSurrogate) {
+        // ==== サロゲートペア文字 ====
         val nextIdx = i + 1;
         if (char.isHighSurrogate && nextIdx < len && text(nextIdx).isLowSurrogate) {
-          val nextLatticeIdx = i + 3;
           val endIdx = i + 2;
           // 現状サロゲートペアの文字種はからなずDEFAULT
           val TokenConfig(charTypeId, charTypeName, forceUnigram, groupToken, ngram, tokens) = charType.getTokenConfig(0);
           if (forceUnigram || !prefixtree.exists(char)) {
             lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
               val Array(leftId, rightId, genCost, posId, id, _*) = token;
-              new LatticeNode(i, endIdx, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
+              new LatticeNode(i, endIdx, leftId, rightId, genCost, posId, id) :: nodes;
             }
           }
           i += 2;
@@ -92,32 +118,30 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
           i += 1;
         }
       } else {
-        // === 普通の2byte文字 ===
+        // ==== 普通の2byte文字 ====
         charType.getTokenConfigs(char).foreach { tokenConfig =>
           val TokenConfig(charTypeId, charTypeName, forceUnigram, groupToken, ngram, tokens) = tokenConfig;
-          // unigramトークン生成
+          // ---- ---- unigramトークン生成 ---- ----
           if (forceUnigram || !prefixtree.exists(char)) {
-            val nextLatticeIdx = i + 2;
             val endIdx = i + 1;
             lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
               val Array(leftId, rightId, genCost, posId, id, _*) = token;
-              new LatticeNode(i, endIdx, leftId, rightId, genCost, posId, id, nextLatticeIdx) :: nodes;
+              new LatticeNode(i, endIdx, leftId, rightId, genCost, posId, id) :: nodes;
             }
           }
-          // ngramトークン生成
+          // ---- ---- ngramトークン生成 ---- ----
           if (ngram > 1) {
             val startIdx = i + 1;
             val endIdx   = if (i + ngram > len) len else i + ngram;
             (startIdx until endIdx).exists { nextIdx =>
               val nextChar   = text(nextIdx);
-              val nextLatticeIdx = nextIdx + 2;
               val endIdx = nextIdx + 1;
               val surfaceLen = endIdx - i;
               if (charType.typeIs(nextChar, charTypeId) && !prefixtree.exists(text, i, endIdx)) {
                 lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
                   val Array(leftId, rightId, genCost, posId, id, _*) = token;
                   val optimizedGenCost = if (surfaceLen > 3) genCost * (100 + 10 * surfaceLen) / 100 else genCost;
-                  new LatticeNode(i, endIdx, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
+                  new LatticeNode(i, endIdx, leftId, rightId, optimizedGenCost, posId, id) :: nodes;
                 }
                 false;
               } else {
@@ -125,23 +149,22 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
               }
             }
           }
-          // groupトークン生成
+          // ---- ---- groupトークン生成 ---- ----
           if (groupToken) {
             val gtoken = groupTokens(charTypeId);
             if (gtoken.isEmpty) { // groupToken が空の場合
               gtoken.init(i);
-            } else {                  // groupToken に作りかけのトークンが存在する場合
+            } else {              // groupToken に作りかけのトークンが存在する場合
               if (gtoken.isNext(i)) {
                 // 同一の文字種が連続していた場合
                 gtoken.add();
               } else if (gtoken.shouldCreateToken) {
                 // 直前の文字が異なる文字種でトークンを作る必要がある場合
                 val latticeIdx     = gtoken.startIdx + 1;
-                val nextLatticeIdx = gtoken.endIdx   + 1;
                 lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
                   val Array(leftId, rightId, genCost, posId, id, _*) = token;
                   val optimizedGenCost = if (gtoken.length > 3) genCost * (100 + 10 * gtoken.length) / 100 else genCost;
-                  new LatticeNode(gtoken.startIdx, gtoken.endIdx, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
+                  new LatticeNode(gtoken.startIdx, gtoken.endIdx, leftId, rightId, optimizedGenCost, posId, id) :: nodes;
                 }
                 gtoken.init(i);
               } else {
@@ -158,11 +181,10 @@ class Viterbi(val prefixtree: PrefixTree[Array[Array[Int]]], val matrix: Matrix,
     groupTokens.foreach { gtoken =>
       if (!gtoken.isEmpty && gtoken.shouldCreateToken) {
         val latticeIdx     = gtoken.startIdx + 1;
-        val nextLatticeIdx = gtoken.endIdx   + 1;
         lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
           val Array(leftId, rightId, genCost, posId, id, _*) = token;
           val optimizedGenCost = if (gtoken.length > 3) genCost * (100 + 10 * gtoken.length) / 100 else genCost;
-          new LatticeNode(gtoken.startIdx, gtoken.endIdx, leftId, rightId, optimizedGenCost, posId, id, nextLatticeIdx) :: nodes;
+          new LatticeNode(gtoken.startIdx, gtoken.endIdx, leftId, rightId, optimizedGenCost, posId, id) :: nodes;
         }
       }
     }

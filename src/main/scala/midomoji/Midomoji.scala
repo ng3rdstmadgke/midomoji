@@ -9,22 +9,14 @@ class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
                private[this] val charType: CharType) {
   private[this] val viterbi = new Viterbi(prefixtree, matrix, charType);
 
-  def analyze(text: String): LatticeNode = {
-    val bos = viterbi.analyze(text);
-    if (bos == None) {
-      throw new RuntimeException("ノードが途中で途切れました (" + text + ")");
-    } else {
-      bos.get;
-    }
-  }
-
   def analyzeInput(is: InputStream, os: OutputStream, bs: Int = 8192)(nodeToString: (String, LatticeNode) => String): Unit = {
     Using[BufferedReader, Unit](new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8), bs)) { br =>
       Using[BufferedWriter, Unit](new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), bs)) { bw =>
+        val sViterbi = viterbi;
         var line = br.readLine();
         while (line != null) {
           val normalized = Normalizer.normalize(line, Normalizer.Form.NFKC);
-          bw.write(nodeToString(normalized, analyze(normalized)));
+          bw.write(nodeToString(normalized, sViterbi.analyze(normalized)));
           line = br.readLine();
         }
         bw.flush();
