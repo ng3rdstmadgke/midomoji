@@ -2,7 +2,7 @@ package com.github.ng3rdstmadgke.midomoji;
 
 import scala.io.Source;
 import scala.io.StdIn.readLine;
-import scala.collection.mutable.ListBuffer;
+import scala.collection.mutable.{ListBuffer, HashMap};
 import java.text.Normalizer;
 import java.io.{BufferedWriter, BufferedReader, OutputStreamWriter, InputStreamReader, OutputStream, InputStream, FileOutputStream, FileInputStream};
 
@@ -52,12 +52,18 @@ object Main {
         val dictDir = argMap("dict-dir");
         var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](Util.dictBin(dictDir));
         val exists = (elem: Array[Int], es: Array[Array[Int]]) => es.exists(e => elem.sameElements(e));
+        val start = System.currentTimeMillis;
         PrefixTree.check[Array[Int]](prefixtree, Util.morphemeTsv(dictDir))(parse)(exists);
+        val end = System.currentTimeMillis;
+        println("time(ms) : " + (end - start));
       }
       case ("check-matrix", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
         val matrix = Util.kryoDeserialize[Matrix](Util.matrixBin(dictDir));
+        val start = System.currentTimeMillis;
         Matrix.check(matrix, Util.matrixTsv(dictDir));
+        val end = System.currentTimeMillis;
+        println("time(ms) : " + (end - start));
       }
       case ("analyze", argMap) => {
         val prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Array[Int]]](Util.dictBin());
@@ -82,7 +88,7 @@ object Main {
   def debug(): Unit = {
     var prefixtree = PrefixTree[Array[Array[Int]]](5);
     var matrix     = Matrix(1316, 1316);
-    var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
+    var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0), HashMap[(Int, Int), Array[Int]]());
     var posInfo    = new PosInfo(Array[String]());
     var metaInfo   = new MetaInfo(Array[Array[String]]());
     def go(): Unit = {
@@ -91,7 +97,7 @@ object Main {
         case "init" :: xs => {
           prefixtree = PrefixTree[Array[Array[Int]]](5);
           matrix     = Matrix(1316, 1316);
-          charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
+          charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0), HashMap[(Int, Int), Array[Int]]());
           posInfo    = new PosInfo(Array[String]());
           metaInfo   = new MetaInfo(Array[Array[String]]());
         }
@@ -136,24 +142,22 @@ object Main {
         }
         case "tokenize" :: text :: xs => {
           val len = text.length;
-          val tokenizer = new Tokenizer[Array[Array[Int]]](charType, prefixtree);
-          val lattice = tokenizer.tokenize(text, Array.fill[List[LatticeNode]](len + 2)(Nil));
-          println("0 : BOS");
+          val viterbi = new Viterbi(prefixtree, matrix, charType);
+          val lattice = viterbi.buildLattice(text);
+          println("[0] : BOS");
           (1 to len).foreach { i =>
-            println("%d : ".format(i));
-            lattice(i).foreach(println(_));
+            println("[%d] : ".format(i));
+            lattice(i).foreach { n =>
+              val surface = text.slice(n.startIdx, n.endIdx);
+              val unk     = if (n.id == -1) " (未)" else "";
+              println("  " + n + "\t: "  + surface + unk);
+            }
           }
-          println("%d : EOS".format(len + 1));
+          println("[%d] : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
           val midomoji = new Midomoji(prefixtree, matrix, charType);
-          val str = midomoji.analyze(text).map { n =>
-            val pos = posInfo.getPos(n.posId);
-            val base = metaInfo.getBaseForm(n.id, n.surface);
-            val yomi = metaInfo.getYomi(n.id, n.surface);
-            "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(n.surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
-          }
-          println("BOS\n" + str.mkString("\n") + "\nEOS\n");
+          println(midomoji.analyze(text, "detail"));
         }
         case "add" :: surface :: xs => {
           prefixtree.add(surface, Array(1,1,1,1)) { (existing, elem) =>

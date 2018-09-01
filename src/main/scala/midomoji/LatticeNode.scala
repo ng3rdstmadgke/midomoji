@@ -3,14 +3,28 @@ package com.github.ng3rdstmadgke.midomoji;
 import scala.collection.Iterable;
 import scala.collection.AbstractIterator;
 
-class LatticeNode(val surface: String, val leftId: Int, val rightId: Int,
-                  val genCost: Int   , val posId: Int , val id: Int     , val nextIdx: Int,
-                  var totalCost: Int = 0, var nextNode: LatticeNode = null) extends Iterable[LatticeNode] {
+/**
+ * ラティス構造を構成するノード 
+ *
+ * @constructor ラティス構造のノードを作る
+ * @param startIdx  文字列におけるトークンの始まりのインデックス。(包含)
+ * @param endIdx    文字列におけるトークンの終わりのインデックス。(排他)
+ * @param leftId    左文脈ID
+ * @param rightId   右文脈ID
+ * @param genCost   生起コスト
+ * @param posId     品詞ID
+ * @param id        メタ情報ID
+ * @param totalCost EOSまでの最小コスト
+ * @param nextNode  totalCostが最小となるノード
+ */
+class LatticeNode(val startIdx: Int  , val endIdx: Int, val leftId: Int , val rightId: Int,
+                  val genCost: Int   , val posId: Int , val id: Int     , var totalCost: Int = 0,
+                  var nextNode: LatticeNode = null) extends Iterable[LatticeNode] {
   override def iterator: Iterator[LatticeNode] = new LatticeNodeIterator(this.nextNode);
 
   override def toString(): String = {
-    val tpl = "LatticeNode(%s, %d, %d, %d, %d, %d, %d)";
-    tpl.format(surface, leftId, rightId, genCost, posId, id, totalCost);
+    val tpl = "LatticeNode(%d, %d, %d, %d, %d, %d, %d, %d)";
+    tpl.format(startIdx, endIdx, leftId, rightId, genCost, posId, id, totalCost);
   }
 }
 

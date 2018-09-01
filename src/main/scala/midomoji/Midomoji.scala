@@ -9,22 +9,19 @@ class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
                private[this] val charType: CharType) {
   private[this] val viterbi = new Viterbi(prefixtree, matrix, charType);
 
-  def analyze(text: String): LatticeNode = {
+  def analyze(text: String, format: String = ""): String = {
     val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
-    val bos = viterbi.analyze(normalized);
-    if (bos == None) {
-      throw new RuntimeException("ノードが途中で途切れました (" + text + ")");
-    } else {
-      bos.get;
-    }
+    Midomoji.format(format)(normalized, viterbi.analyze(normalized));
   }
 
-  def analyzeInput(is: InputStream, os: OutputStream, bs: Int = 8192)(nodeToString: LatticeNode => String): Unit = {
+  def analyzeInput(is: InputStream, os: OutputStream, bs: Int = 8192)(nodeToString: (String, LatticeNode) => String): Unit = {
     Using[BufferedReader, Unit](new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8), bs)) { br =>
       Using[BufferedWriter, Unit](new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), bs)) { bw =>
+        val sViterbi = viterbi;
         var line = br.readLine();
         while (line != null) {
-          bw.write(nodeToString(analyze(line)));
+          val normalized = Normalizer.normalize(line, Normalizer.Form.NFKC);
+          bw.write(nodeToString(normalized, sViterbi.analyze(normalized)));
           line = br.readLine();
         }
         bw.flush();
@@ -34,40 +31,41 @@ class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
 }
 
 object Midomoji {
-  def format(fmt: String): LatticeNode => String = {
+  def format(fmt: String): (String, LatticeNode) => String = {
     fmt match {
       case "wakati"      => wakati;
       case "detail"      => detail();
-      case "wakati-base" => wakatiBase()
+      case "wakati-base" => wakatiBase();
       case _             => simple;
     }
   }
 
-  def simple(nodes: LatticeNode): String = {
-    val str = nodes.map(n => "%s\t%d\t%d\t%d".format(n.surface, n.leftId, n.rightId, n.genCost));
+  def simple(text: String, nodes: LatticeNode): String = {
+    val str = nodes.map(n => "%s\t%d\t%d\t%d".format(text.slice(n.startIdx, n.endIdx), n.leftId, n.rightId, n.genCost));
     "BOS\n" + str.mkString("\n") + "\nEOS\n";
   }
 
-  def wakati(nodes: LatticeNode): String = {
-    nodes.map(_.surface).mkString(" ") + "\n";
+  def wakati(text: String, nodes: LatticeNode): String = {
+    nodes.map(n => text.slice(n.startIdx, n.endIdx)).mkString(" ") + "\n";
   }
 
-  def detail(): LatticeNode => String = {
+  def detail(): (String, LatticeNode) => String = {
     val posInfo  = Util.kryoDeserializeFromResource[PosInfo](Util.posInfoBin());
     val metaInfo = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
-    nodes: LatticeNode => {
+    (text: String, nodes: LatticeNode) => {
       val str = nodes.map { n =>
+        val surface = text.slice(n.startIdx, n.endIdx);
         val pos = posInfo.getPos(n.posId);
-        val base = metaInfo.getBaseForm(n.id, n.surface);
-        val yomi = metaInfo.getYomi(n.id, n.surface);
-        "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(n.surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
+        val base = metaInfo.getBaseForm(n.id, surface);
+        val yomi = metaInfo.getYomi(n.id, surface);
+        "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
       }
       "BOS\n" + str.mkString("\n") + "\nEOS\n";
     }
   }
 
-  def wakatiBase(): LatticeNode => String = {
+  def wakatiBase(): (String, LatticeNode) => String = {
     val metaInfo = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
-    nodes: LatticeNode => nodes.map(n => metaInfo.getBaseForm(n.id, n.surface)).mkString(" ") + "\n";
+    (text: String, nodes: LatticeNode) => nodes.map(n => metaInfo.getBaseForm(n.id, text.slice(n.startIdx, n.endIdx))).mkString(" ") + "\n";
   }
 }
