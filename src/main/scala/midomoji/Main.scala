@@ -144,7 +144,7 @@ object Main {
           val len = text.length;
           val viterbi = new Viterbi(prefixtree, matrix, charType);
           val lattice = viterbi.buildLattice(text);
-          println("0 : BOS");
+          println("[0] : BOS");
           (1 to len).foreach { i =>
             println("[%d] : ".format(i));
             lattice(i).foreach { n =>
@@ -153,18 +153,11 @@ object Main {
               println("  " + n + "\t: "  + surface + unk);
             }
           }
-          println("%d : EOS".format(len + 1));
+          println("[%d] : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
-          val viterbi = new Viterbi(prefixtree, matrix, charType);
-          val str = viterbi.analyze(text).map { n =>
-            val surface = text.slice(n.startIdx, n.endIdx);
-            val pos = posInfo.getPos(n.posId);
-            val base = metaInfo.getBaseForm(n.id, surface);
-            val yomi = metaInfo.getYomi(n.id, surface);
-            "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
-          }
-          println("BOS\n" + str.mkString("\n") + "\nEOS\n");
+          val midomoji = new Midomoji(prefixtree, matrix, charType);
+          println(midomoji.analyze(text, "detail"));
         }
         case "add" :: surface :: xs => {
           prefixtree.add(surface, Array(1,1,1,1)) { (existing, elem) =>

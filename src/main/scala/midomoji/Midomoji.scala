@@ -9,6 +9,11 @@ class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
                private[this] val charType: CharType) {
   private[this] val viterbi = new Viterbi(prefixtree, matrix, charType);
 
+  def analyze(text: String, format: String = ""): String = {
+    val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
+    Midomoji.format(format)(normalized, viterbi.analyze(normalized));
+  }
+
   def analyzeInput(is: InputStream, os: OutputStream, bs: Int = 8192)(nodeToString: (String, LatticeNode) => String): Unit = {
     Using[BufferedReader, Unit](new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8), bs)) { br =>
       Using[BufferedWriter, Unit](new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), bs)) { bw =>
@@ -30,7 +35,7 @@ object Midomoji {
     fmt match {
       case "wakati"      => wakati;
       case "detail"      => detail();
-      case "wakati-base" => wakatiBase()
+      case "wakati-base" => wakatiBase();
       case _             => simple;
     }
   }
