@@ -104,11 +104,26 @@ object Main {
         val prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Array[Int]]](Util.dictBin());
         val matrix     = Util.kryoDeserializeFromResource[Matrix](Util.matrixBin());
         val charType   = Util.kryoDeserializeFromResource[CharType](Util.configBin());
-        val midomoji = new Midomoji(prefixtree, matrix, charType);
         val format = if (argMap.contains("format")) argMap("format") else "simple";
         val is = if (argMap.contains("input"))  new FileInputStream(argMap("input"))   else System.in;
         val os = if (argMap.contains("output")) new FileOutputStream(argMap("output")) else System.out;
         val bs = if (argMap.contains("buffer-size")) argMap("buffer-size").toInt else 8192;
+        // ユーザー辞書の構築
+        // ファイルの形式は「SURFACE	LEFT_ID	RIGHT_ID	GEN_COST」
+        val userDict = if (argMap.contains("user-dict")) {
+          Using[Source, LegacyPrefixTree[List[Array[Int]]]](Source.fromFile(argMap("user-dict"))) { s =>
+            val f = (data: List[Array[Int]], value: Array[Int]) => if (data == null) List(value) else value :: data;
+            val dict = new LegacyPrefixTree[List[Array[Int]]]();
+            s.getLines.foreach { line =>
+              val Array(surface, leftId, rightId, genCost, _*) = line.split("\t");
+              dict.add(surface, Array(leftId.toInt, rightId.toInt, genCost.toInt, -1, -1))(f);
+            }
+            dict;
+          }
+        } else {
+          new LegacyPrefixTree[List[Array[Int]]]();
+        }
+        val midomoji = new Midomoji(prefixtree, matrix, charType, userDict);
         midomoji.analyzeInput(is, os, bs)(Midomoji.format(format));
       }
       case ("debug", argMap) => {
@@ -177,7 +192,8 @@ object Main {
         }
         case "tokenize" :: text :: xs => {
           val len = text.length;
-          val viterbi = new Viterbi(prefixtree, matrix, charType);
+          val userDict = new LegacyPrefixTree[List[Array[Int]]]();
+          val viterbi = new Viterbi(prefixtree, matrix, charType, userDict);
           val lattice = viterbi.buildLattice(text);
           println("[0] : BOS");
           (1 to len).foreach { i =>
@@ -191,7 +207,8 @@ object Main {
           println("[%d] : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
-          val midomoji = new Midomoji(prefixtree, matrix, charType);
+          val userDict = new LegacyPrefixTree[List[Array[Int]]]();
+          val midomoji = new Midomoji(prefixtree, matrix, charType, userDict);
           println(midomoji.analyze(text, "detail"));
         }
         case "add" :: surface :: xs => {

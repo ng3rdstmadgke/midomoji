@@ -8,6 +8,8 @@ class LegacyPrefixTree[A]() {
   private[this] var nextSize = 0;
   private[this] var data: A = _;
 
+  def getData(): A = data;
+
   def add[B](key: String, value: B)(f: (A, B) => A): Unit = _add(key, 0, value)(f);
 
   private def _add[B](key: String, offset: Int, value: B)(f: (A, B) => A): Unit = {

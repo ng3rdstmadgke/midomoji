@@ -9,7 +9,8 @@ package com.github.ng3rdstmadgke.midomoji;
  */
 class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
               private[this] val matrix: Matrix,
-              private[this] val charType: CharType) {
+              private[this] val charType: CharType,
+              private[this] val userPrefixtree: LegacyPrefixTree[List[Array[Int]]]) {
 
   /**
    * ラティス構造を解析するメソッド
@@ -47,7 +48,7 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
    * トライ木に登録されているトークンをラティス構造に追加する
    *
    * @param text    解析対象の文字列
-   * @param offseta textのseek開始インデックス
+   * @param offset  textのseek開始インデックス
    * @param len     textの長さ
    * @param lattice ラティス構造
    * @param size    トライ木の配列サイズ
@@ -79,6 +80,37 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
   }
 
   /**
+   * トライ木に登録されているトークンをラティス構造に追加する
+   *
+   * @param text     解析対象の文字列
+   * @param offset   textのseek開始インデックス
+   * @param len      textの長さ
+   * @param lattice  ラティス構造
+   */
+  def addUserDictToken(text: String, offset: Int, len: Int, lattice: Array[List[LatticeNode]]): Unit = {
+    var tree = userPrefixtree;
+    val latticeIdx = offset + 1;
+    var currIdx = 1;
+    var seek = offset;
+    while (seek < len) {
+      val treeNode = tree.get(text(seek));
+      if (treeNode == null) {
+        return ();
+      } else {
+       if (treeNode.tree.getData != null) {
+         val endIdx = seek + 1;
+         lattice(latticeIdx) = treeNode.tree.getData.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
+           val Array(leftId, rightId, genCost, posId, id, _*) = token;
+           new LatticeNode(offset, endIdx, leftId, rightId, genCost, posId, id) :: nodes;
+         }
+       }
+      }
+      tree = treeNode.tree;
+      seek += 1;
+    }
+  }
+
+  /**
    * ラティス構造を構築するメソッド
    *
    * @param text    解析対象の文字列
@@ -97,6 +129,8 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
     while (i < len) {
       // ==== ==== ==== 辞書の単語を追加 ==== ==== ====
       addDictToken(text, i, len, lattice, size, base, check, data);
+      // ==== ==== ==== ユーザー辞書の単語を追加 ==== ==== ====
+      addUserDictToken(text, i, len, lattice);
       // ==== ==== ==== 未知語を追加 ==== ==== ====
       val char = text(i);
       val latticeIdx = i + 1;

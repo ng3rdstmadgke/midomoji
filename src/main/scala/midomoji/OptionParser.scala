@@ -46,6 +46,9 @@ object OptionParser {
         case ("-o" | "--output") :: output :: rest => {
            go(rest, ret + ("output" -> output));
         }
+        case ("-u" | "--user-dict") :: userDict :: rest => {
+           go(rest, ret + ("user-dict" -> userDict));
+        }
         case ("-bs" | "--buffer-size") :: bufferSize :: rest => {
            go(rest, ret + ("buffer-size" -> bufferSize));
         }
