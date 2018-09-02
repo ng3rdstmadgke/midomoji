@@ -11,6 +11,7 @@ object OptionParser {
         case "build-meta-info" :: rest => ("build-meta-info", buildOptionParser(rest));
         case "check-dict"      :: rest => ("check-dict"     , buildOptionParser(rest));
         case "check-matrix"    :: rest => ("check-matrix"   , buildOptionParser(rest));
+        case "check-user-dict" :: rest => ("check-user-dict", buildOptionParser(rest));
         case "analyze"         :: rest => ("analyze"        , analyzeOptionParser(rest));
         case "debug"           :: rest => ("debug"          , Map[String, String]());
         case _                         => ("help"           , Map[String, String]());
@@ -84,6 +85,7 @@ object OptionParser {
     - build-meta-info <DICT_DIR> : 形態素のメタ情報表(原型や読みなど)を構築する
     - check-dict <DICT_DIR>      : 構築した形態素辞書にすべての形態素が登録されているかチェックする
     - check-matrix <DICT_DIR>    : 構築した連接コスト表にすべての連接コストが登録されているかをチェックする
+    - check-user-dict <DICT_DIR> : ユーザー辞書用のトライ木に形態素辞書の単語を全部登録して、登録されているかをチェックする;
     - debug <DICT_DIR>           : デバッグ用コマンドラインを起動する
 """;
     println(help.trim);
