@@ -366,26 +366,28 @@ object PrefixTree {
    *
    * @param prefixree テスト対象のトライ木
    * @param morphemePath トライ木に登録した辞書ファイル
-   * @param parse 辞書ファイルの行を行をパースして、トライ木に登録してあるオブジェクトに変換する関数
    * @param exists トライ木の検索結果の中に、parseで生成したオブジェクトが含まれているかチェックする関数(含んでいればtrue)
    */
-  def check[A](prefixree: PrefixTree[Array[A]], morphemePath: String)(parse: (Array[String], Int) => A)(exists: (A, Array[A]) => Boolean): Unit = {
-    var errors = Using[Source, List[String]](Source.fromFile(morphemePath)) { s =>
-      s.getLines.zipWithIndex.foldLeft(List[String]()) { (es, lineWithId) =>
+  def check[A](prefixree: PrefixTree[Array[A]], morphemePath: String)(exists: (Int, Array[A]) => Boolean): Unit = {
+    Using[Source, Unit](Source.fromFile(morphemePath)) { s =>
+      var success = true;
+      s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
-        val msg = "input : " + line + "\noutput : ";
         val arr = line.split("\t");
-        val surface = arr.head;
-        val elem = parse(arr, id);
-        prefixree.find(surface) match {
-          case None     => msg + "None" :: es;
-          case Some(ds) => if (exists(elem, ds)) es  else msg + ds.length :: es;
+        prefixree.find(arr.head) match {
+          case None     => {
+            println(arr.head + " not found...");
+            success = false;
+          }
+          case Some(ds) => {
+            if (!exists(id, ds)) {
+              println(arr.head + " not found...");
+              success = false;
+            }
+          }
         }
       }
-    }
-    errors match {
-      case Nil => println("OK!!!");
-      case ls  => println(ls.mkString("\n"));
+      if (success) println("OK!!!");
     }
   }
 }

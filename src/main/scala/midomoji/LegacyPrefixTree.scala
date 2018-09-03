@@ -25,7 +25,6 @@ class LegacyPrefixTree[A]() {
   def find(key: String): Option[A] = _find(key, 0);
 
   private def _find(key: String, offset: Int): Option[A] = {
-    val c = if (offset == 0) "root" else key(offset - 1);
     if (offset == key.length) {
       Option(data);
     } else {
@@ -53,7 +52,7 @@ class LegacyPrefixTree[A]() {
       }
       i -= 1;
     }
-    // nextSize == 0 の場合
+    // i == 0 の場合
     nextNodes(i) = newNode;
     return newNode;
   }

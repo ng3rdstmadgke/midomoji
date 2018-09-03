@@ -48,10 +48,10 @@ function should_build {
   CHECK_FILE=$2
   if [ -r "$SRC" -a -r "$CHECK_FILE" ]; then
     if [ "$(md5sum $SRC)" = "$(cat $CHECK_FILE)" ]; then
-      return 0
+      echo "0"
     fi
   fi
-  return 1
+  echo "1"
 }
 
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
