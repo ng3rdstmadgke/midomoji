@@ -65,15 +65,65 @@ object Main {
         val end = System.currentTimeMillis;
         println("time(ms) : " + (end - start));
       }
+      case ("check-user-dict", argMap) if argMap.contains("dict-dir") => {
+        val dictDir = argMap("dict-dir");
+        val path = Util.morphemeTsv(dictDir);
+        val t1 = System.currentTimeMillis;
+        val userDict = Using[Source, LegacyPrefixTree[List[Array[Int]]]](Source.fromFile(path)) { s =>
+          val f = (data: List[Array[Int]], value: Array[Int]) => if (data == null) List(value) else value :: data;
+          val dict = new LegacyPrefixTree[List[Array[Int]]]();
+          s.getLines.zipWithIndex.foreach { lineWithId =>
+            val (line, id) = lineWithId;
+            val arr = line.split("\t");
+            val elem = parse(arr, id);
+            dict.add(arr.head, elem)(f);
+          }
+          dict;
+        }
+        val t2 = System.currentTimeMillis;
+        Using[Source, Unit](Source.fromFile(path)) { s =>
+          s.getLines.zipWithIndex.foreach { lineWithId =>
+            val (line, id) = lineWithId;
+            val arr = line.split("\t");
+            val data = userDict.find(arr.head);
+            data match {
+              case None    => println(arr.head + "not found...");
+              case Some(d) => {
+                if (!d.exists(elem => elem(4) == id)) {
+                  println(arr.head + "not found...");
+                }
+              }
+            }
+          }
+        }
+        val t3 = System.currentTimeMillis;
+        println("build dictionary : " + (t2 - t1) + " ms");
+        println("check dictionary : " + (t3 - t2) + " ms");
+      }
       case ("analyze", argMap) => {
         val prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Array[Int]]](Util.dictBin());
         val matrix     = Util.kryoDeserializeFromResource[Matrix](Util.matrixBin());
         val charType   = Util.kryoDeserializeFromResource[CharType](Util.configBin());
-        val midomoji = new Midomoji(prefixtree, matrix, charType);
         val format = if (argMap.contains("format")) argMap("format") else "simple";
         val is = if (argMap.contains("input"))  new FileInputStream(argMap("input"))   else System.in;
         val os = if (argMap.contains("output")) new FileOutputStream(argMap("output")) else System.out;
         val bs = if (argMap.contains("buffer-size")) argMap("buffer-size").toInt else 8192;
+        // ユーザー辞書の構築
+        // ファイルの形式は「SURFACE	LEFT_ID	RIGHT_ID	GEN_COST」
+        val userDict = if (argMap.contains("user-dict")) {
+          Using[Source, LegacyPrefixTree[List[Array[Int]]]](Source.fromFile(argMap("user-dict"))) { s =>
+            val f = (data: List[Array[Int]], value: Array[Int]) => if (data == null) List(value) else value :: data;
+            val dict = new LegacyPrefixTree[List[Array[Int]]]();
+            s.getLines.foreach { line =>
+              val Array(surface, leftId, rightId, genCost, _*) = line.split("\t");
+              dict.add(surface, Array(leftId.toInt, rightId.toInt, genCost.toInt, -1, -1))(f);
+            }
+            dict;
+          }
+        } else {
+          new LegacyPrefixTree[List[Array[Int]]]();
+        }
+        val midomoji = new Midomoji(prefixtree, matrix, charType, userDict);
         midomoji.analyzeInput(is, os, bs)(Midomoji.format(format));
       }
       case ("debug", argMap) => {
@@ -142,7 +192,8 @@ object Main {
         }
         case "tokenize" :: text :: xs => {
           val len = text.length;
-          val viterbi = new Viterbi(prefixtree, matrix, charType);
+          val userDict = new LegacyPrefixTree[List[Array[Int]]]();
+          val viterbi = new Viterbi(prefixtree, matrix, charType, userDict);
           val lattice = viterbi.buildLattice(text);
           println("[0] : BOS");
           (1 to len).foreach { i =>
@@ -156,7 +207,8 @@ object Main {
           println("[%d] : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
-          val midomoji = new Midomoji(prefixtree, matrix, charType);
+          val userDict = new LegacyPrefixTree[List[Array[Int]]]();
+          val midomoji = new Midomoji(prefixtree, matrix, charType, userDict);
           println(midomoji.analyze(text, "detail"));
         }
         case "add" :: surface :: xs => {
@@ -186,17 +238,17 @@ object Main {
         case "exit" :: xs => return ();
         case _ => {
           val help = ListBuffer[String]();
-          help += "init                : 辞書をリセットする";
-          help += "load [DICT_DIR]     : 辞書を読み込む。DICT_DIRを指定しない場合はresourcesから読み込む";
-          help += "cost <LEFT> <RIGHT> : 連接コストを表示する";
-          help += "find <TEXT>         : トライ木に対してSURFACEをキーとする値を取り出す";
-          help += "search <TEXT>       : トライ木に対して共通接頭辞検索を行う";
-          help += "tokenize <TEXT>     : 未知語ノードの生成を行う";
-          help += "analyze <TEXT>      : 形態素解析を行う";
-          help += "add <SURFACE>       : トライ木に要素を追加する";
-          help += "dump                : トライ木をダンプする";
-          help += "status              : 辞書のステータスを表示する";
-          help += "exit                : デバッグモードを終了する";
+          help += "init                     : 辞書をリセットする";
+          help += "load [DICT_DIR]          : 辞書を読み込む。DICT_DIRを指定しない場合はresourcesから読み込む";
+          help += "cost <LEFT> <RIGHT>      : 連接コストを表示する";
+          help += "find <TEXT>              : トライ木に対してSURFACEをキーとする値を取り出す";
+          help += "search <TEXT>            : トライ木に対して共通接頭辞検索を行う";
+          help += "tokenize <TEXT>          : 未知語ノードの生成を行う";
+          help += "analyze <TEXT>           : 形態素解析を行う";
+          help += "add <SURFACE>            : トライ木に要素を追加する";
+          help += "dump                     : トライ木をダンプする";
+          help += "status                   : 辞書のステータスを表示する";
+          help += "exit                     : デバッグモードを終了する";
           println(help.mkString("\n"));
         }
       }
