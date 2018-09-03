@@ -51,9 +51,9 @@ object Main {
       case ("check-dict", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
         var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](Util.dictBin(dictDir));
-        val exists = (elem: Array[Int], es: Array[Array[Int]]) => es.exists(e => elem.sameElements(e));
+        val exists = (id: Int, es: Array[Array[Int]]) => es.exists(_(4) == id);
         val start = System.currentTimeMillis;
-        PrefixTree.check[Array[Int]](prefixtree, Util.morphemeTsv(dictDir))(parse)(exists);
+        PrefixTree.check[Array[Int]](prefixtree, Util.morphemeTsv(dictDir))(exists);
         val end = System.currentTimeMillis;
         println("time(ms) : " + (end - start));
       }
@@ -87,10 +87,10 @@ object Main {
             val arr = line.split("\t");
             val data = userDict.find(arr.head);
             data match {
-              case None    => println(arr.head + "not found...");
+              case None    => println(arr.head + " not found...");
               case Some(d) => {
                 if (!d.exists(elem => elem(4) == id)) {
-                  println(arr.head + "not found...");
+                  println(arr.head + " not found...");
                 }
               }
             }
