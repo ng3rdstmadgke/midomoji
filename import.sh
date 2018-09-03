@@ -41,7 +41,7 @@ if [ ! -d "$DICT_DIR" ]; then
 fi
 
 MATRIX=matrix.def
-POS_ID=$IPADIC_DIR/pos-id.def
+POS_ID=pos-id.def
 # LEFT_ID=$IPADIC_DIR/left-id.def
 # RIGHT_ID=$IPADIC_DIR/right-id.def
 # REWRITE=$IPADIC_DIR/rewrite.def
