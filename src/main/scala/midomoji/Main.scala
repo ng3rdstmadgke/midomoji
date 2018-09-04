@@ -55,7 +55,7 @@ object Main {
         val start = System.currentTimeMillis;
         PrefixTree.check[Array[Int]](prefixtree, Util.morphemeTsv(dictDir))(exists);
         val end = System.currentTimeMillis;
-        println("time(ms) : " + (end - start));
+        printTime("check dict", end - start);
       }
       case ("check-matrix", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
@@ -63,42 +63,19 @@ object Main {
         val start = System.currentTimeMillis;
         Matrix.check(matrix, Util.matrixTsv(dictDir));
         val end = System.currentTimeMillis;
-        println("time(ms) : " + (end - start));
+        printTime("check matrix", end - start);
       }
       case ("check-user-dict", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
         val path = Util.morphemeTsv(dictDir);
         val t1 = System.currentTimeMillis;
-        val userDict = Using[Source, LegacyPrefixTree[List[Array[Int]]]](Source.fromFile(path)) { s =>
-          val f = (data: List[Array[Int]], value: Array[Int]) => if (data == null) List(value) else value :: data;
-          val dict = new LegacyPrefixTree[List[Array[Int]]]();
-          s.getLines.zipWithIndex.foreach { lineWithId =>
-            val (line, id) = lineWithId;
-            val arr = line.split("\t");
-            val elem = parse(arr, id);
-            dict.add(arr.head, elem)(f);
-          }
-          dict;
-        }
+        val parseUser = (arr: Array[String], id: Int) => Array(arr(1).toInt, arr(2).toInt, arr(2).toInt, -1, id);
+        val userDict = LegacyPrefixTree.build(path)(parseUser);
         val t2 = System.currentTimeMillis;
-        Using[Source, Unit](Source.fromFile(path)) { s =>
-          s.getLines.zipWithIndex.foreach { lineWithId =>
-            val (line, id) = lineWithId;
-            val arr = line.split("\t");
-            val data = userDict.find(arr.head);
-            data match {
-              case None    => println(arr.head + " not found...");
-              case Some(d) => {
-                if (!d.exists(elem => elem(4) == id)) {
-                  println(arr.head + " not found...");
-                }
-              }
-            }
-          }
-        }
+        LegacyPrefixTree.check(path, userDict);
         val t3 = System.currentTimeMillis;
-        println("build dictionary : " + (t2 - t1) + " ms");
-        println("check dictionary : " + (t3 - t2) + " ms");
+        printTime("build dictionary", t2 - t1);
+        printTime("check dictionary", t3 - t2);
       }
       case ("analyze", argMap) => {
         val t1 = System.currentTimeMillis();
@@ -111,16 +88,9 @@ object Main {
         val bs = if (argMap.contains("buffer-size")) argMap("buffer-size").toInt else 8192;
         // ユーザー辞書の構築
         // ファイルの形式は「SURFACE	LEFT_ID	RIGHT_ID	GEN_COST」
+        val parseUser = (arr: Array[String], id: Int) => Array(arr(1).toInt, arr(2).toInt, arr(2).toInt, -1, -1);
         val userDict = if (argMap.contains("user-dict")) {
-          Using[Source, LegacyPrefixTree[List[Array[Int]]]](Source.fromFile(argMap("user-dict"))) { s =>
-            val f = (data: List[Array[Int]], value: Array[Int]) => if (data == null) List(value) else value :: data;
-            val dict = new LegacyPrefixTree[List[Array[Int]]]();
-            s.getLines.foreach { line =>
-              val Array(surface, leftId, rightId, genCost, _*) = line.split("\t");
-              dict.add(surface, Array(leftId.toInt, rightId.toInt, genCost.toInt, -1, -1))(f);
-            }
-            dict;
-          }
+          LegacyPrefixTree.build(argMap("user-dict"))(parseUser);
         } else {
           new LegacyPrefixTree[List[Array[Int]]]();
         }
@@ -129,16 +99,8 @@ object Main {
         midomoji.analyzeInput(is, os, bs)(Midomoji.format(format));
         val t3 = System.currentTimeMillis();
         if (argMap.contains("debug")) {
-          val load    = t2 - t1;
-          val loadMin = (load / 60000);
-          val loadSec = (load - (loadMin * 60000)) / 1000;
-          val loadMs  = load - (loadMin * 60000) - (loadSec * 1000);
-          System.err.println("load    : " + loadMin + " min " + loadSec + " sec " + loadMs + " ms");
-          val analyze = t3 - t2;
-          val analyzeMin = (analyze / 60000);
-          val analyzeSec = (analyze - (analyzeMin * 60000)) / 1000;
-          val analyzeMs  = analyze - (analyzeMin * 60000) - (analyzeSec * 1000);
-          System.err.println("analyze : " + analyzeMin + " min " + analyzeSec + " sec " + analyzeMs + " ms");
+          printTime("load", t2 - t1);
+          printTime("analyze", t3 - t2);
         }
       }
       case ("debug", argMap) => {
@@ -148,6 +110,13 @@ object Main {
         OptionParser.help();
       }
     }
+  }
+
+  def printTime(title: String, time: Long, pad: Int = 10): Unit = {
+    val min = (time / 60000);
+    val sec = (time - (min * 60000)) / 1000;
+    val ms  = time - (min * 60000) - (sec * 1000);
+    System.err.println(title.padTo(pad, ' ') + " : " + min + " min " + sec + " sec " + ms + " ms");
   }
 
   def debug(): Unit = {

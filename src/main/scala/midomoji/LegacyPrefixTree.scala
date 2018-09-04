@@ -1,5 +1,7 @@
 package com.github.ng3rdstmadgke.midomoji
 
+import scala.io.Source;
+
 class TreeNode[A](val char: Char, val tree: LegacyPrefixTree[A]) {
   override def toString(): String = char.toString;
 }
@@ -81,5 +83,38 @@ class LegacyPrefixTree[A]() {
       }
     }
     loop(0, nextSize - 1, key, nextNodes);
+  }
+}
+
+object LegacyPrefixTree {
+  def build(morphemePath: String)(parse: (Array[String], Int) => Array[Int]): LegacyPrefixTree[List[Array[Int]]] = {
+    Using[Source, LegacyPrefixTree[List[Array[Int]]]](Source.fromFile(morphemePath)) { s =>
+      val dict = new LegacyPrefixTree[List[Array[Int]]]();
+      s.getLines.zipWithIndex.foreach { lineWithId =>
+        val (line, id) = lineWithId;
+        val arr = line.split("\t");
+        val elem = parse(arr, id);
+        dict.add(arr.head, elem) { (data, v) => if (data == null) List(v) else v :: data };
+      }
+      dict;
+    }
+  }
+
+  def check(morphemePath: String, dict: LegacyPrefixTree[List[Array[Int]]]): Unit = {
+    Using[Source, Unit](Source.fromFile(morphemePath)) { s =>
+      s.getLines.zipWithIndex.foreach { lineWithId =>
+        val (line, id) = lineWithId;
+        val arr = line.split("\t");
+        val data = dict.find(arr.head);
+        data match {
+          case None    => println(arr.head + " not found...");
+          case Some(d) => {
+            if (!d.exists(elem => elem(4) == id)) {
+              println(arr.head + " not found...");
+            }
+          }
+        }
+      }
+    }
   }
 }
