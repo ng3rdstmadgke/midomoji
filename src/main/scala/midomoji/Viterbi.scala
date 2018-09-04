@@ -10,7 +10,7 @@ package com.github.ng3rdstmadgke.midomoji;
 class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
               private[this] val matrix: Matrix,
               private[this] val charType: CharType,
-              private[this] val userPrefixtree: LegacyPrefixTree[List[Array[Int]]]) {
+              private[this] val userPrefixtree: LegacyPrefixTree[Array[Int]]) {
 
   /**
    * ラティス構造を解析するメソッド

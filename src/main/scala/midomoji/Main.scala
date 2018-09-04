@@ -69,8 +69,7 @@ object Main {
         val dictDir = argMap("dict-dir");
         val path = Util.morphemeTsv(dictDir);
         val t1 = System.currentTimeMillis;
-        val parseUser = (arr: Array[String], id: Int) => Array(arr(1).toInt, arr(2).toInt, arr(2).toInt, -1, id);
-        val userDict = LegacyPrefixTree.build(path)(parseUser);
+        val userDict = LegacyPrefixTree.build(path) {(arr, id) => Array(arr(1).toInt, arr(2).toInt, arr(2).toInt, -1, id)};
         val t2 = System.currentTimeMillis;
         LegacyPrefixTree.check(path, userDict);
         val t3 = System.currentTimeMillis;
@@ -88,11 +87,9 @@ object Main {
         val bs = if (argMap.contains("buffer-size")) argMap("buffer-size").toInt else 8192;
         // ユーザー辞書の構築
         // ファイルの形式は「SURFACE	LEFT_ID	RIGHT_ID	GEN_COST」
-        val parseUser = (arr: Array[String], id: Int) => Array(arr(1).toInt, arr(2).toInt, arr(2).toInt, -1, -1);
-        val userDict = if (argMap.contains("user-dict")) {
-          LegacyPrefixTree.build(argMap("user-dict"))(parseUser);
-        } else {
-          new LegacyPrefixTree[List[Array[Int]]]();
+        val userDict = argMap.get("user-dict") match {
+          case None       => new LegacyPrefixTree[Array[Int]]();
+          case Some(path) => LegacyPrefixTree.build(path) {(arr, id) => Array(arr(1).toInt, arr(2).toInt, arr(2).toInt, -1, -1)};
         }
         val t2 = System.currentTimeMillis();
         val midomoji = new Midomoji(prefixtree, matrix, charType, userDict);
@@ -176,7 +173,7 @@ object Main {
         }
         case "tokenize" :: text :: xs => {
           val len = text.length;
-          val userDict = new LegacyPrefixTree[List[Array[Int]]]();
+          val userDict = new LegacyPrefixTree[Array[Int]]();
           val viterbi = new Viterbi(prefixtree, matrix, charType, userDict);
           val lattice = viterbi.buildLattice(text);
           println("[0] : BOS");
@@ -191,7 +188,7 @@ object Main {
           println("[%d] : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
-          val userDict = new LegacyPrefixTree[List[Array[Int]]]();
+          val userDict = new LegacyPrefixTree[Array[Int]]();
           val midomoji = new Midomoji(prefixtree, matrix, charType, userDict);
           println(midomoji.analyze(text, "detail"));
         }

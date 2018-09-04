@@ -2,31 +2,31 @@ package com.github.ng3rdstmadgke.midomoji
 
 import scala.io.Source;
 
-class TreeNode[A](val char: Char, val tree: LegacyPrefixTree[A]) {
+class TreeNode[T](val char: Char, val tree: LegacyPrefixTree[T]) {
   override def toString(): String = char.toString;
 }
 class LegacyPrefixTree[A]() {
   private[this] var nextNodes = new Array[TreeNode[A]](10);
   private[this] var nextSize = 0;
-  private[this] var data: A = _;
+  private[this] var data: List[A] = null;
 
-  def getData(): A = data;
+  def getData(): List[A] = data;
 
-  def add[B](key: String, value: B)(f: (A, B) => A): Unit = _add(key, 0, value)(f);
+  def add(key: String, value: A): Unit = _add(key, 0, value);
 
-  private def _add[B](key: String, offset: Int, value: B)(f: (A, B) => A): Unit = {
+  private def _add(key: String, offset: Int, value: A): Unit = {
     if (offset == key.length) {
-      data = f(data, value);
+      data = if (data == null) List(value) else value :: data;
     } else {
       val tmpNextNode = get(key(offset));
       val nextNode = if (tmpNextNode == null) insert(key(offset)) else tmpNextNode;
-      nextNode.tree._add(key, offset + 1, value)(f);
+      nextNode.tree._add(key, offset + 1, value);
     }
   }
 
-  def find(key: String): Option[A] = _find(key, 0);
+  def find(key: String): Option[List[A]] = _find(key, 0);
 
-  private def _find(key: String, offset: Int): Option[A] = {
+  private def _find(key: String, offset: Int): Option[List[A]] = {
     if (offset == key.length) {
       Option(data);
     } else {
@@ -87,30 +87,30 @@ class LegacyPrefixTree[A]() {
 }
 
 object LegacyPrefixTree {
-  def build(morphemePath: String)(parse: (Array[String], Int) => Array[Int]): LegacyPrefixTree[List[Array[Int]]] = {
-    Using[Source, LegacyPrefixTree[List[Array[Int]]]](Source.fromFile(morphemePath)) { s =>
-      val dict = new LegacyPrefixTree[List[Array[Int]]]();
+  def build(morphemePath: String)(parse: (Array[String], Int) => Array[Int]): LegacyPrefixTree[Array[Int]] = {
+    Using[Source, LegacyPrefixTree[Array[Int]]](Source.fromFile(morphemePath)) { s =>
+      val dict = new LegacyPrefixTree[Array[Int]]();
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
         val arr = line.split("\t");
         val elem = parse(arr, id);
-        dict.add(arr.head, elem) { (data, v) => if (data == null) List(v) else v :: data };
+        dict.add(arr.head, elem);
       }
       dict;
     }
   }
 
-  def check(morphemePath: String, dict: LegacyPrefixTree[List[Array[Int]]]): Unit = {
+  def check(morphemePath: String, dict: LegacyPrefixTree[Array[Int]]): Unit = {
     Using[Source, Unit](Source.fromFile(morphemePath)) { s =>
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
         val arr = line.split("\t");
         val data = dict.find(arr.head);
         data match {
-          case None    => println(arr.head + " not found...");
+          case None    => println(arr.head + " 遷移失敗");
           case Some(d) => {
             if (!d.exists(elem => elem(4) == id)) {
-              println(arr.head + " not found...");
+              println(arr.head + " 見つかりませんでした");
             }
           }
         }

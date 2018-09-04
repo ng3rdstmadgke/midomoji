@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
                private[this] val matrix: Matrix,
                private[this] val charType: CharType,
-               private[this] val userPrefixtree: LegacyPrefixTree[List[Array[Int]]]) {
+               private[this] val userPrefixtree: LegacyPrefixTree[Array[Int]]) {
   private[this] val viterbi = new Viterbi(prefixtree, matrix, charType, userPrefixtree);
 
   def analyze(text: String, format: String = ""): String = {
