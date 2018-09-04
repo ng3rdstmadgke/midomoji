@@ -101,6 +101,7 @@ object Main {
         println("check dictionary : " + (t3 - t2) + " ms");
       }
       case ("analyze", argMap) => {
+        val t1 = System.currentTimeMillis();
         val prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Array[Int]]](Util.dictBin());
         val matrix     = Util.kryoDeserializeFromResource[Matrix](Util.matrixBin());
         val charType   = Util.kryoDeserializeFromResource[CharType](Util.configBin());
@@ -123,8 +124,22 @@ object Main {
         } else {
           new LegacyPrefixTree[List[Array[Int]]]();
         }
+        val t2 = System.currentTimeMillis();
         val midomoji = new Midomoji(prefixtree, matrix, charType, userDict);
         midomoji.analyzeInput(is, os, bs)(Midomoji.format(format));
+        val t3 = System.currentTimeMillis();
+        if (argMap.contains("debug")) {
+          val load    = t2 - t1;
+          val loadMin = (load / 60000);
+          val loadSec = (load - (loadMin * 60000)) / 1000;
+          val loadMs  = load - (loadMin * 60000) - (loadSec * 1000);
+          System.err.println("load    : " + loadMin + " min " + loadSec + " sec " + loadMs + " ms");
+          val analyze = t3 - t2;
+          val analyzeMin = (analyze / 60000);
+          val analyzeSec = (analyze - (analyzeMin * 60000)) / 1000;
+          val analyzeMs  = analyze - (analyzeMin * 60000) - (analyzeSec * 1000);
+          System.err.println("analyze : " + analyzeMin + " min " + analyzeSec + " sec " + analyzeMs + " ms");
+        }
       }
       case ("debug", argMap) => {
         debug();

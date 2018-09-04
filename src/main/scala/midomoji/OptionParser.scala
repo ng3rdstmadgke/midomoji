@@ -52,6 +52,9 @@ object OptionParser {
         case ("-bs" | "--buffer-size") :: bufferSize :: rest => {
            go(rest, ret + ("buffer-size" -> bufferSize));
         }
+        case ("-d" | "--debug") :: rest => {
+           go(rest, ret + ("debug" -> "true"));
+        }
         case some :: rest => {
           if (!ret.contains("input")) {
             go(rest, ret + ("input" -> some));

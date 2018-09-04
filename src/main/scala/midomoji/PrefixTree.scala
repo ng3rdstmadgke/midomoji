@@ -31,13 +31,15 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
    */
   def find(key: String): Option[A] = {
     var currIdx = 1;
-    for (char <- key) {
-      val nextIdx = base(currIdx) + char.toInt;
-      if (nextIdx < size && check(nextIdx) == currIdx) {
-        currIdx = nextIdx;
-      } else {
+    var seek = 0;
+    val len = key.length;
+    while (seek < len) {
+      val nextIdx = base(currIdx) + key(seek).toInt;
+      if (nextIdx >= size || check(nextIdx) != currIdx) {
         return None;
       }
+      currIdx = nextIdx;
+      seek += 1;
     }
     if (data(currIdx) == null) None else Some(data(currIdx));
   }
@@ -376,12 +378,12 @@ object PrefixTree {
         val arr = line.split("\t");
         prefixree.find(arr.head) match {
           case None     => {
-            println(arr.head + " not found...");
+            println(arr.head + " : 遷移失敗");
             success = false;
           }
           case Some(ds) => {
             if (!exists(id, ds)) {
-              println(arr.head + " not found...");
+              println(arr.head + " : 見つかりませんでした");
               success = false;
             }
           }
