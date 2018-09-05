@@ -1,6 +1,8 @@
 package com.github.ng3rdstmadgke.midomoji
 
 import scala.io.Source;
+import scala.collection.mutable.Queue;
+import scala.reflect.ClassTag;
 
 class TreeNode[T](val char: Char, val tree: LegacyPrefixTree[T]) {
   override def toString(): String = char.toString;
@@ -10,6 +12,8 @@ class LegacyPrefixTree[A]() {
   private[this] var nextSize = 0;
   private[this] var data: List[A] = null;
 
+  def getNextNodes(): Array[TreeNode[A]] = nextNodes;
+  def getNextSize(): Int = nextSize;
   def getData(): List[A] = data;
 
   def add(key: String, value: A): Unit = _add(key, 0, value);
@@ -84,6 +88,73 @@ class LegacyPrefixTree[A]() {
     }
     loop(0, nextSize - 1, key, nextNodes);
   }
+
+  def toDoubleArray()(implicit tag: ClassTag[A]): PrefixTree[Array[A]] = {
+    var base  = new Array[Int](50000);
+    var check = new Array[Int](50000);
+    var data  = new Array[List[A]](50000);
+    val q = new Queue[(Int, LegacyPrefixTree[A])]();
+    q.enqueue((1, this));
+    while (!q.isEmpty) {
+      val (currIdx, tree) = q.dequeue();
+      val nodes     = tree.getNextNodes();
+      val nodesSize = tree.getNextSize();
+      val (newBase, shouldExtend) = findBase(nodes, nodesSize, base, check, data);
+      base(currIdx) = newBase;
+      if (shouldExtend) {
+        val size = Math.floor((newBase + 65535) * 1.25).toInt;
+        val tmpBase  = new Array[Int](size);
+        val tmpCheck = new Array[Int](size);
+        val tmpData  = new Array[List[A]](size);
+        base.copyToArray(tmpBase);
+        check.copyToArray(tmpCheck);
+        data.copyToArray(tmpData);
+        base  = tmpBase;
+        check = tmpCheck;
+        data  = tmpData;
+      }
+      var i = 0;
+      while (i < nodesSize) {
+        val nextIdx = newBase + nodes(i).char;
+        base(nextIdx)  = 0;
+        check(nextIdx) = currIdx;
+        data(nextIdx)  = nodes(i).tree.getData;
+        q.enqueue((nextIdx, nodes(i).tree));
+        i += 1
+      }
+    }
+    // prefixtreeオブジェクトを返す
+    val prefixtree = new PrefixTree[List[A]](base.length, base, check, data);
+    prefixtree.convertDataType[Array[A]] { data =>
+      data match {
+        case null => null;
+        case Nil  => null;
+        case list => list.toArray;
+      }
+    }
+  }
+
+  // base値を探す
+  def findBase(nodes: Array[TreeNode[A]], nodesSize: Int,
+               base: Array[Int], check: Array[Int], data: Array[List[A]]): (Int, Boolean) = {
+    val arrLen = base.length;
+    var newBase = 1;
+    var i = 0
+      while(i < nodesSize) {
+        val newIdx = newBase + nodes(i).char;
+        if (newIdx >= arrLen) {
+          return (newBase, true);
+        }
+        if (check(newIdx) == 0) {
+          i += 1;
+        } else {
+          i = 0;
+          newBase += 1;
+        }
+      }
+    (newBase, false);
+  }
+
 }
 
 object LegacyPrefixTree {

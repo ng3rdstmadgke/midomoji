@@ -69,7 +69,7 @@ done
 infolog "build matrix.def"
 nkf -Luw $IPADIC_DIR/$MATRIX | tr " " "\t"  > $DICT_DIR/matrix.tsv
 infolog "convert csv to tsv and normalize morphemes"
-ls $IPADIC_DIR/*.csv | xargs cat | nkf -Luw | tr "," "\t" | python3 $SCRIPT_DIR/normalize.py | LC_ALL=C sort -t$'\t' -k1 > $DICT_DIR/raw_morpheme.tsv
+ls $IPADIC_DIR/*.csv | xargs cat | nkf -Luw | tr "," "\t" | python3 $SCRIPT_DIR/normalize.py > $DICT_DIR/raw_morpheme.tsv
 infolog "build pos.tsv"
 cat $DICT_DIR/raw_morpheme.tsv | awk -F$'\t' '{print $5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10}' | LC_ALL=C sort | uniq > $DICT_DIR/pos.tsv
 infolog "copy config"

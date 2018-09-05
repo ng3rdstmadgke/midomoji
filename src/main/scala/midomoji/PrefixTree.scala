@@ -4,7 +4,10 @@ import scala.reflect.ClassTag;
 import scala.collection.AbstractIterator;
 import scala.io.Source;
 
-class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[Int], private[this] var check: Array[Int], private[this] var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
+class PrefixTree[A](private[this] var size: Int,
+                    private[this] var base: Array[Int],
+                    private[this] var check: Array[Int],
+                    private[this] var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
   private var none: A = _; // A型のnull値
 
   def getFields: (Int, Array[Int], Array[Int], Array[A]) = (size, base, check, data);
@@ -233,8 +236,6 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
     base  = tmpBase;
     check = tmpCheck;
     data  = tmpData;
-
-
   }
 
 

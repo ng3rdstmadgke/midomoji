@@ -25,7 +25,13 @@ object Main {
     OptionParser.parse(args) match {
       case ("build-dict", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
-        val prefixtree = PrefixTree.build[Array[Int]](Util.morphemeTsv(dictDir))(parse)(add);
+        val t1 = System.currentTimeMillis;
+        val legacyPrefixtree = LegacyPrefixTree.build(Util.morphemeTsv(dictDir))(parse);
+        val t2 = System.currentTimeMillis;
+        val prefixtree = legacyPrefixtree.toDoubleArray();
+        val t3 = System.currentTimeMillis;
+        printTime("build legacy prefixtree", t2 - t1, 25);
+        printTime("build prefixtree", t3 - t2, 25);
         PrefixTreeSerializeObject.serialize[Array[Array[Int]]](prefixtree, Util.dictBin(dictDir));
       }
       case ("build-matrix", argMap) if argMap.contains("dict-dir") => {
