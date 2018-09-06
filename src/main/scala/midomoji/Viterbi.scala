@@ -121,9 +121,9 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
     val (size, base, check, data) = prefixtree.getFields;
     // Indexは1スタート
     val lattice = Array.fill[List[LatticeNode]](len + 2)(Nil);
-    // startIdx, endIdx, leftId, rightId, genCost, posId, id, nextIdx
-    lattice(0)       = new LatticeNode(-1 , 0      , 0, 0, 0, -1, -1, 1)  :: Nil;
-    lattice(len + 1) = new LatticeNode(len, len + 1, 0, 0, 0, -1, -1, -1) :: Nil;
+    // startIdx, endIdx, leftId, rightId, genCost, posId, id
+    lattice(0)       = new LatticeNode(-1 , 0      , 0, 0, 0, -1, -1) :: Nil;
+    lattice(len + 1) = new LatticeNode(len, len + 1, 0, 0, 0, -1, -1) :: Nil;
     val groupTokens = (0 until charType.charTypeNum).toArray.map{ i => new GroupToken(-1, -1, charType.getTokenConfig(i)); }
     var i = 0;
     while (i < len) {
