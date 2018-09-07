@@ -59,7 +59,7 @@ object Midomoji {
         val pos = posInfo.getPos(n.posId);
         val base = metaInfo.getBaseForm(n.id, surface);
         val yomi = metaInfo.getYomi(n.id, surface);
-        "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
+        "%s\t%d\t%d\t%d\t%s\t%s\t%s\t%d".format(surface, n.leftId, n.rightId, n.genCost, pos, base, yomi, n.totalCost);
       }
       "BOS\n" + str.mkString("\n") + "\nEOS\n";
     }
