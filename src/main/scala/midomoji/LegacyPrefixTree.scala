@@ -75,7 +75,7 @@ class LegacyPrefixTree[A]() {
       if (s > e) {
         null;
       } else {
-        val m = (s + e) / 2;
+        val m = (s + e) >> 1;
         val median = nodes(m);
         if (key < median.char) {
           loop(s, m - 1, key, nodes);
@@ -90,9 +90,9 @@ class LegacyPrefixTree[A]() {
   }
 
   def toDoubleArray()(implicit tag: ClassTag[A]): PrefixTree[Array[A]] = {
-    var base  = new Array[Int](50000);
-    var check = new Array[Int](50000);
-    var data  = new Array[List[A]](50000);
+    var base  = new Array[Int](100000);
+    var check = new Array[Int](100000);
+    var data  = new Array[List[A]](100000);
     val q = new Queue[(Int, LegacyPrefixTree[A])]();
     q.enqueue((1, this));
     while (!q.isEmpty) {
@@ -119,7 +119,9 @@ class LegacyPrefixTree[A]() {
         base(nextIdx)  = 0;
         check(nextIdx) = currIdx;
         data(nextIdx)  = nodes(i).tree.getData;
-        q.enqueue((nextIdx, nodes(i).tree));
+        if (nodes(i).tree.getNextSize > 0) {
+          q.enqueue((nextIdx, nodes(i).tree));
+        }
         i += 1
       }
     }
