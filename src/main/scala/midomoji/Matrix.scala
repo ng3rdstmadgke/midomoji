@@ -6,14 +6,13 @@ import scala.io.Source;
  * 連接コスト表
  */
 class Matrix(private[this] val leftSize: Int, private[this] val rightSize: Int) extends Serializable {
-  private[this] val matrix = new Array[Int](leftSize * rightSize);
-  private[this] val maxCost = 100000;
+  private[this] val matrix = new Array[Short](leftSize * rightSize);
 
   def this() = this(0, 0);
 
-  def getCost(left: Int, right: Int): Int = try { matrix(left * leftSize + right); } catch { case e:ArrayIndexOutOfBoundsException => maxCost; }
+  def getCost(left: Int, right: Int): Int = try { matrix(left * leftSize + right).toInt; } catch { case e:ArrayIndexOutOfBoundsException => 65535; }
 
-  def setCost(left: Int, right: Int, cost: Int): Unit = matrix(left * leftSize + right) = cost;
+  def setCost(left: Int, right: Int, cost: Short): Unit = matrix(left * leftSize + right) = cost;
 }
 
 object Matrix {
@@ -26,28 +25,27 @@ object Matrix {
       val Array(leftSize, rightSize) = if (iter.hasNext) iter.next().split("\t").map(_.toInt) else Array(0, 0);
       val mt = Matrix(leftSize, rightSize);
       iter.foreach { line =>
-        val Array(l, r, c) = line.split("\t").map(_.toInt);
-        mt.setCost(l, r, c);
+        val Array(l, r, c) = line.split("\t");
+        mt.setCost(l.toInt, r.toInt, c.toShort);
       }
       mt;
     }
   }
 
   def check(matrix: Matrix, matrixPath: String): Unit = {
-    // 正しく登録されているかチェック
-    val errors = Using[Source, List[String]](Source.fromFile(matrixPath)) { s =>
-      val msgTpl = "left=%d, right=%d, FileCost=%d, ObjCost=%d";
+    Using[Source, Unit](Source.fromFile(matrixPath)) { s =>
       val iter = s.getLines;
       if (iter.hasNext) iter.next();
-      iter.foldLeft(List[String]()) { (es, line) =>
-        val Array(l, r, c) = line.split("\t").map(_.toInt);
-        val objCost = matrix.getCost(l, r);
-        if (c == objCost) es else msgTpl.format(l, r, c, objCost) :: es;
+      iter.foreach { line =>
+        val Array(l, r, c1) = line.split("\t").map(_.toInt);
+        val c2 = matrix.getCost(l, r);
+        if (c1 != c2) {
+          println("left=%d, right=%d, FileCost=%d, ObjCost=%d".format(l, r, c1, c2));
+          println("FAILED...");
+          return ();
+        }
       }
-    }
-    errors match {
-      case Nil => println("OK!!!");
-      case ls  => println(ls.mkString("\n"));
+      println("OK!!!");
     }
   }
 }
