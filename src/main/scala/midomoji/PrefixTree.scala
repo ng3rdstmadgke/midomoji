@@ -369,22 +369,22 @@ object PrefixTree {
    *
    * @param prefixree テスト対象のトライ木
    * @param morphemePath トライ木に登録した辞書ファイル
-   * @param exists トライ木の検索結果の中に、parseで生成したオブジェクトが含まれているかチェックする関数(含んでいればtrue)
    */
-  def check[A](prefixree: PrefixTree[Array[A]], morphemePath: String)(exists: (Int, Array[A]) => Boolean): Unit = {
+  def check(prefixree: PrefixTree[Array[Long]], morphemePath: String): Unit = {
     Using[Source, Unit](Source.fromFile(morphemePath)) { s =>
       var success = true;
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
-        val arr = line.split("\t");
-        prefixree.find(arr.head) match {
+        val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
+        val elem = Morpheme(left.toLong, genCost.toLong, posId.toLong, id.toLong);
+        prefixree.find(surface) match {
           case None     => {
-            println(arr.head + " : 遷移失敗");
+            println(surface + " : 遷移失敗");
             success = false;
           }
           case Some(ds) => {
-            if (!exists(id, ds)) {
-              println(arr.head + " : 見つかりませんでした");
+            if (!ds.exists(e => e == elem)) {
+              println(surface + " : 見つかりませんでした");
               success = false;
             }
           }

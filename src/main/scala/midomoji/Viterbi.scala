@@ -7,10 +7,10 @@ package com.github.ng3rdstmadgke.midomoji;
  * @param matrix     連接コスト表オブジェクト
  * @param charType   文字種設定オブジェクト
  */
-class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
+class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
               private[this] val matrix: Matrix,
               private[this] val charType: CharType,
-              private[this] val userPrefixtree: LegacyPrefixTree[Array[Int]]) {
+              private[this] val userPrefixtree: LegacyPrefixTree[Long]) {
 
   /**
    * ラティス構造を解析するメソッド
@@ -57,7 +57,7 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
    * @param data    トライ木のdata
    */
   def addDictToken(text: String, offset: Int     , len: Int         , lattice: Array[List[LatticeNode]],
-                   size: Int   , base: Array[Int], check: Array[Int], data: Array[Array[Array[Int]]]): Unit = {
+                   size: Int   , base: Array[Int], check: Array[Int], data: Array[Array[Long]]): Unit = {
     val latticeIdx = offset + 1;
     var currIdx = 1;
     var seek = offset;
@@ -67,8 +67,7 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
         if (data(nextIdx) != null) {
           val endIdx         = seek + 1;
           lattice(latticeIdx) = data(nextIdx).foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-            val Array(leftId, rightId, genCost, posId, id, _*) = token;
-            new LatticeNode(offset, endIdx, leftId, rightId, genCost, posId, id) :: nodes;
+            new LatticeNode(offset, endIdx, Morpheme.connId(token), Morpheme.connId(token), Morpheme.genCost(token), Morpheme.posId(token), Morpheme.id(token)) :: nodes;
           }
         }
         currIdx = nextIdx;
@@ -100,8 +99,7 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
        if (treeNode.tree.getData != null) {
          val endIdx = seek + 1;
          lattice(latticeIdx) = treeNode.tree.getData.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-           val Array(leftId, rightId, genCost, posId, id, _*) = token;
-           new LatticeNode(offset, endIdx, leftId, rightId, genCost, posId, id) :: nodes;
+           new LatticeNode(offset, endIdx, Morpheme.connId(token), Morpheme.connId(token), Morpheme.genCost(token), Morpheme.posId(token), Morpheme.id(token)) :: nodes;
          }
        }
       }

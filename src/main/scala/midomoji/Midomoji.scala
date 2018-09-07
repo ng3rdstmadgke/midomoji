@@ -4,10 +4,10 @@ import java.text.Normalizer;
 import java.io.{BufferedWriter, BufferedReader, OutputStreamWriter, InputStreamReader, OutputStream, InputStream, FileOutputStream, FileInputStream};
 import java.nio.charset.StandardCharsets;
 
-class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
+class Midomoji(private[this] val prefixtree: PrefixTree[Array[Long]],
                private[this] val matrix: Matrix,
                private[this] val charType: CharType,
-               private[this] val userPrefixtree: LegacyPrefixTree[Array[Int]]) {
+               private[this] val userPrefixtree: LegacyPrefixTree[Long]) {
   private[this] val viterbi = new Viterbi(prefixtree, matrix, charType, userPrefixtree);
 
   def analyze(text: String, format: String = ""): String = {

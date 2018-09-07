@@ -160,30 +160,29 @@ class LegacyPrefixTree[A]() {
 }
 
 object LegacyPrefixTree {
-  def build(morphemePath: String)(parse: (Array[String], Int) => Array[Int]): LegacyPrefixTree[Array[Int]] = {
-    Using[Source, LegacyPrefixTree[Array[Int]]](Source.fromFile(morphemePath)) { s =>
-      val dict = new LegacyPrefixTree[Array[Int]]();
+  def build(morphemePath: String): LegacyPrefixTree[Long] = {
+    Using[Source, LegacyPrefixTree[Long]](Source.fromFile(morphemePath)) { s =>
+      val dict = new LegacyPrefixTree[Long]();
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
-        val arr = line.split("\t");
-        val elem = parse(arr, id);
-        dict.add(arr.head, elem);
+        val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
+        dict.add(surface, Morpheme(left.toLong, genCost.toLong, posId.toLong, id.toLong));
       }
       dict;
     }
   }
 
-  def check(morphemePath: String, dict: LegacyPrefixTree[Array[Int]]): Unit = {
+  def check(morphemePath: String, dict: LegacyPrefixTree[Long]): Unit = {
     Using[Source, Unit](Source.fromFile(morphemePath)) { s =>
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
-        val arr = line.split("\t");
-        val data = dict.find(arr.head);
-        data match {
-          case None    => println(arr.head + " 遷移失敗");
+        val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
+        val elem = Morpheme(left.toLong, genCost.toLong, posId.toLong, id.toLong);
+        dict.find(surface) match {
+          case None    => println(surface + " 遷移失敗");
           case Some(d) => {
-            if (!d.exists(elem => elem(4) == id)) {
-              println(arr.head + " 見つかりませんでした");
+            if (!d.exists(e => e == elem)) {
+              println(surface + " 見つかりませんでした");
             }
           }
         }
