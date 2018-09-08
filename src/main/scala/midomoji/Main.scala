@@ -6,11 +6,23 @@ import scala.collection.mutable.{ListBuffer, HashMap};
 import java.text.Normalizer;
 import java.io.{BufferedWriter, BufferedReader, OutputStreamWriter, InputStreamReader, OutputStream, InputStream, FileOutputStream, FileInputStream};
 
+/**
+ * connId  : 12bit
+ * genCost : 16bit
+ * posId   : 10bit
+ * id      : 24bit
+ */
+object Morpheme {
+    def connId(n: Long): Int  = (n & 4095L).toInt;
+    def genCost(n: Long): Int = ((n >>> 12) & 65535L).toShort.toInt;
+    def posId(n: Long): Int   = ((n >>> 28) & 1023L).toInt;
+    def id(n: Long): Int      = ((n >>> 38) & 16777215L).toInt;
+    def apply(connId: Long, genCost: Long, posId: Long, id: Long): Long = {
+        connId | ((genCost & 65535L) << 12) | ((posId & 1023L) << 28) | ((id & 16777215L) << 38);
+    }
+}
+
 object Main {
-  def parse(arr: Array[String], id: Int): Array[Int] = {
-    val Array(surface, left, right, cost, pos, base, yomi, pron) = arr;
-    Array(left.toInt, right.toInt, cost.toInt, pos.toInt, id);
-  }
 
   def add(existing: List[Array[Int]], elem: Array[Int]): List[Array[Int]] = {
     existing match {
@@ -20,13 +32,18 @@ object Main {
     }
   }
 
-
   def main(args: Array[String]): Unit = {
     OptionParser.parse(args) match {
       case ("build-dict", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
-        val prefixtree = PrefixTree.build[Array[Int]](Util.morphemeTsv(dictDir))(parse)(add);
-        PrefixTreeSerializeObject.serialize[Array[Array[Int]]](prefixtree, Util.dictBin(dictDir));
+        val t1 = System.currentTimeMillis;
+        val legacyPrefixtree = LegacyPrefixTree.build(Util.morphemeTsv(dictDir));
+        val t2 = System.currentTimeMillis;
+        val prefixtree = legacyPrefixtree.toDoubleArray();
+        val t3 = System.currentTimeMillis;
+        printTime("build legacy prefixtree", t2 - t1, 25);
+        printTime("build prefixtree", t3 - t2, 25);
+        PrefixTreeSerializeObject.serialize[Array[Long]](prefixtree, Util.dictBin(dictDir));
       }
       case ("build-matrix", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
@@ -50,12 +67,11 @@ object Main {
       }
       case ("check-dict", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
-        var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](Util.dictBin(dictDir));
-        val exists = (id: Int, es: Array[Array[Int]]) => es.exists(_(4) == id);
+        var prefixtree = PrefixTreeSerializeObject.deserialize[Array[Long]](Util.dictBin(dictDir));
         val start = System.currentTimeMillis;
-        PrefixTree.check[Array[Int]](prefixtree, Util.morphemeTsv(dictDir))(exists);
+        PrefixTree.check(prefixtree, Util.morphemeTsv(dictDir));
         val end = System.currentTimeMillis;
-        println("time(ms) : " + (end - start));
+        printTime("check dict", end - start);
       }
       case ("check-matrix", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
@@ -63,45 +79,22 @@ object Main {
         val start = System.currentTimeMillis;
         Matrix.check(matrix, Util.matrixTsv(dictDir));
         val end = System.currentTimeMillis;
-        println("time(ms) : " + (end - start));
+        printTime("check matrix", end - start);
       }
       case ("check-user-dict", argMap) if argMap.contains("dict-dir") => {
         val dictDir = argMap("dict-dir");
         val path = Util.morphemeTsv(dictDir);
         val t1 = System.currentTimeMillis;
-        val userDict = Using[Source, LegacyPrefixTree[List[Array[Int]]]](Source.fromFile(path)) { s =>
-          val f = (data: List[Array[Int]], value: Array[Int]) => if (data == null) List(value) else value :: data;
-          val dict = new LegacyPrefixTree[List[Array[Int]]]();
-          s.getLines.zipWithIndex.foreach { lineWithId =>
-            val (line, id) = lineWithId;
-            val arr = line.split("\t");
-            val elem = parse(arr, id);
-            dict.add(arr.head, elem)(f);
-          }
-          dict;
-        }
+        val userDict = LegacyPrefixTree.build(path);
         val t2 = System.currentTimeMillis;
-        Using[Source, Unit](Source.fromFile(path)) { s =>
-          s.getLines.zipWithIndex.foreach { lineWithId =>
-            val (line, id) = lineWithId;
-            val arr = line.split("\t");
-            val data = userDict.find(arr.head);
-            data match {
-              case None    => println(arr.head + " not found...");
-              case Some(d) => {
-                if (!d.exists(elem => elem(4) == id)) {
-                  println(arr.head + " not found...");
-                }
-              }
-            }
-          }
-        }
+        LegacyPrefixTree.check(path, userDict);
         val t3 = System.currentTimeMillis;
-        println("build dictionary : " + (t2 - t1) + " ms");
-        println("check dictionary : " + (t3 - t2) + " ms");
+        printTime("build dictionary", t2 - t1);
+        printTime("check dictionary", t3 - t2);
       }
       case ("analyze", argMap) => {
-        val prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Array[Int]]](Util.dictBin());
+        val t1 = System.currentTimeMillis();
+        val prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Long]](Util.dictBin());
         val matrix     = Util.kryoDeserializeFromResource[Matrix](Util.matrixBin());
         val charType   = Util.kryoDeserializeFromResource[CharType](Util.configBin());
         val format = if (argMap.contains("format")) argMap("format") else "simple";
@@ -110,21 +103,18 @@ object Main {
         val bs = if (argMap.contains("buffer-size")) argMap("buffer-size").toInt else 8192;
         // ユーザー辞書の構築
         // ファイルの形式は「SURFACE	LEFT_ID	RIGHT_ID	GEN_COST」
-        val userDict = if (argMap.contains("user-dict")) {
-          Using[Source, LegacyPrefixTree[List[Array[Int]]]](Source.fromFile(argMap("user-dict"))) { s =>
-            val f = (data: List[Array[Int]], value: Array[Int]) => if (data == null) List(value) else value :: data;
-            val dict = new LegacyPrefixTree[List[Array[Int]]]();
-            s.getLines.foreach { line =>
-              val Array(surface, leftId, rightId, genCost, _*) = line.split("\t");
-              dict.add(surface, Array(leftId.toInt, rightId.toInt, genCost.toInt, -1, -1))(f);
-            }
-            dict;
-          }
-        } else {
-          new LegacyPrefixTree[List[Array[Int]]]();
+        val userDict = argMap.get("user-dict") match {
+          case None       => new LegacyPrefixTree[Long]();
+          case Some(path) => LegacyPrefixTree.build(path);
         }
+        val t2 = System.currentTimeMillis();
         val midomoji = new Midomoji(prefixtree, matrix, charType, userDict);
         midomoji.analyzeInput(is, os, bs)(Midomoji.format(format));
+        val t3 = System.currentTimeMillis();
+        if (argMap.contains("debug")) {
+          printTime("load", t2 - t1);
+          printTime("analyze", t3 - t2);
+        }
       }
       case ("debug", argMap) => {
         debug();
@@ -135,8 +125,15 @@ object Main {
     }
   }
 
+  def printTime(title: String, time: Long, pad: Int = 10): Unit = {
+    val min = (time / 60000);
+    val sec = (time - (min * 60000)) / 1000;
+    val ms  = time - (min * 60000) - (sec * 1000);
+    System.err.println(title.padTo(pad, ' ') + " : " + min + " min " + sec + " sec " + ms + " ms");
+  }
+
   def debug(): Unit = {
-    var prefixtree = PrefixTree[Array[Array[Int]]](5);
+    var prefixtree = PrefixTree[Array[Long]](5);
     var matrix     = Matrix(1316, 1316);
     var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0), HashMap[(Int, Int), Array[Int]]());
     var posInfo    = new PosInfo(Array[String]());
@@ -145,7 +142,7 @@ object Main {
       print("command : ");
       readLine.split(" ").map(_.trim).toList match {
         case "init" :: xs => {
-          prefixtree = PrefixTree[Array[Array[Int]]](5);
+          prefixtree = PrefixTree[Array[Long]](5);
           matrix     = Matrix(1316, 1316);
           charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0), HashMap[(Int, Int), Array[Int]]());
           posInfo    = new PosInfo(Array[String]());
@@ -153,14 +150,14 @@ object Main {
         }
         case "load" :: xs => {
           if (xs.isEmpty) {
-            prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Array[Int]]](Util.dictBin());
+            prefixtree = PrefixTreeSerializeObject.deserializeFromResource[Array[Long]](Util.dictBin());
             matrix     = Util.kryoDeserializeFromResource[Matrix](Util.matrixBin());
             charType   = Util.kryoDeserializeFromResource[CharType](Util.configBin());
             posInfo    = Util.kryoDeserializeFromResource[PosInfo](Util.posInfoBin());
             metaInfo   = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
           } else {
             val dictDir = xs.head;
-            prefixtree = PrefixTreeSerializeObject.deserialize[Array[Array[Int]]](Util.dictBin(dictDir));
+            prefixtree = PrefixTreeSerializeObject.deserialize[Array[Long]](Util.dictBin(dictDir));
             matrix     = Util.kryoDeserialize[Matrix](Util.matrixBin(dictDir));
             charType   = Util.kryoDeserialize[CharType](Util.configBin(dictDir));
             posInfo    = Util.kryoDeserialize[PosInfo](Util.posInfoBin(dictDir));
@@ -175,8 +172,7 @@ object Main {
           }
         }
         case "find" :: text :: xs => {
-          def dataToString: Array[Array[Int]] => String = arr => arr.map(e => "(" + e(0) + ", " + e(1) + ", " + e(2) + ")").mkString(", ");
-          prefixtree.debugFind(text)(dataToString);
+          prefixtree.debugFind(text)(xs => xs.mkString(", "));
         }
         case "search" :: text :: xs => {
           val len = text.length;
@@ -185,14 +181,14 @@ object Main {
             println("%d : %s".format(i + 1, sub));
             prefixtree.prefixSearch(sub).foreach { e =>
               val surface = e._1;
-              val data = e._2.map(d => "(" + d.mkString(", ") + ")").mkString(", ");
+              val data = e._2.mkString(", ");
               println("  %s : %s".format(surface, data));
             }
           }
         }
         case "tokenize" :: text :: xs => {
           val len = text.length;
-          val userDict = new LegacyPrefixTree[List[Array[Int]]]();
+          val userDict = new LegacyPrefixTree[Long]();
           val viterbi = new Viterbi(prefixtree, matrix, charType, userDict);
           val lattice = viterbi.buildLattice(text);
           println("[0] : BOS");
@@ -207,21 +203,20 @@ object Main {
           println("[%d] : EOS".format(len + 1));
         }
         case "analyze" :: text :: xs => {
-          val userDict = new LegacyPrefixTree[List[Array[Int]]]();
+          val userDict = new LegacyPrefixTree[Long]();
           val midomoji = new Midomoji(prefixtree, matrix, charType, userDict);
           println(midomoji.analyze(text, "detail"));
         }
         case "add" :: surface :: xs => {
-          prefixtree.add(surface, Array(1,1,1,1)) { (existing, elem) =>
+          prefixtree.add(surface, 0L) { (existing, elem) =>
             existing match {
-              case arr: Array[Array[Int]] => {
+              case arr: Array[Long] => {
                 val len = arr.length;
-                val newArr = new Array[Array[Int]](len + 1);
-                (0 until len).foreach(i => newArr(i) = arr(i));
-                newArr(len) = elem;
+                val newArr = new Array[Long](len + 1);
+                arr.copyToArray(newArr);
                 newArr;
               }
-              case _ => Array[Array[Int]](elem);
+              case _ => Array[Long](elem);
             }
           };
         }

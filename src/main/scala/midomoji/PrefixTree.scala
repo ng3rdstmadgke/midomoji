@@ -4,7 +4,10 @@ import scala.reflect.ClassTag;
 import scala.collection.AbstractIterator;
 import scala.io.Source;
 
-class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[Int], private[this] var check: Array[Int], private[this] var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
+class PrefixTree[A](private[this] var size: Int,
+                    private[this] var base: Array[Int],
+                    private[this] var check: Array[Int],
+                    private[this] var data: Array[A])(implicit m: ClassTag[A]) extends Serializable {
   private var none: A = _; // A型のnull値
 
   def getFields: (Int, Array[Int], Array[Int], Array[A]) = (size, base, check, data);
@@ -31,13 +34,15 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
    */
   def find(key: String): Option[A] = {
     var currIdx = 1;
-    for (char <- key) {
-      val nextIdx = base(currIdx) + char.toInt;
-      if (nextIdx < size && check(nextIdx) == currIdx) {
-        currIdx = nextIdx;
-      } else {
+    var seek = 0;
+    val len = key.length;
+    while (seek < len) {
+      val nextIdx = base(currIdx) + key(seek).toInt;
+      if (nextIdx >= size || check(nextIdx) != currIdx) {
         return None;
       }
+      currIdx = nextIdx;
+      seek += 1;
     }
     if (data(currIdx) == null) None else Some(data(currIdx));
   }
@@ -231,8 +236,6 @@ class PrefixTree[A](private[this] var size: Int, private[this] var base: Array[I
     base  = tmpBase;
     check = tmpCheck;
     data  = tmpData;
-
-
   }
 
 
@@ -366,22 +369,22 @@ object PrefixTree {
    *
    * @param prefixree テスト対象のトライ木
    * @param morphemePath トライ木に登録した辞書ファイル
-   * @param exists トライ木の検索結果の中に、parseで生成したオブジェクトが含まれているかチェックする関数(含んでいればtrue)
    */
-  def check[A](prefixree: PrefixTree[Array[A]], morphemePath: String)(exists: (Int, Array[A]) => Boolean): Unit = {
+  def check(prefixree: PrefixTree[Array[Long]], morphemePath: String): Unit = {
     Using[Source, Unit](Source.fromFile(morphemePath)) { s =>
       var success = true;
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
-        val arr = line.split("\t");
-        prefixree.find(arr.head) match {
+        val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
+        val elem = Morpheme(left.toLong, genCost.toLong, posId.toLong, id.toLong);
+        prefixree.find(surface) match {
           case None     => {
-            println(arr.head + " not found...");
+            println(surface + " : 遷移失敗");
             success = false;
           }
           case Some(ds) => {
-            if (!exists(id, ds)) {
-              println(arr.head + " not found...");
+            if (!ds.exists(e => e == elem)) {
+              println(surface + " : 見つかりませんでした");
               success = false;
             }
           }

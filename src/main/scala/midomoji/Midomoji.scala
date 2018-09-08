@@ -4,10 +4,10 @@ import java.text.Normalizer;
 import java.io.{BufferedWriter, BufferedReader, OutputStreamWriter, InputStreamReader, OutputStream, InputStream, FileOutputStream, FileInputStream};
 import java.nio.charset.StandardCharsets;
 
-class Midomoji(private[this] val prefixtree: PrefixTree[Array[Array[Int]]],
+class Midomoji(private[this] val prefixtree: PrefixTree[Array[Long]],
                private[this] val matrix: Matrix,
                private[this] val charType: CharType,
-               private[this] val userPrefixtree: LegacyPrefixTree[List[Array[Int]]]) {
+               private[this] val userPrefixtree: LegacyPrefixTree[Long]) {
   private[this] val viterbi = new Viterbi(prefixtree, matrix, charType, userPrefixtree);
 
   def analyze(text: String, format: String = ""): String = {
@@ -59,7 +59,7 @@ object Midomoji {
         val pos = posInfo.getPos(n.posId);
         val base = metaInfo.getBaseForm(n.id, surface);
         val yomi = metaInfo.getYomi(n.id, surface);
-        "%s\t%d\t%d\t%d\t%s\t%s\t%s".format(surface, n.leftId, n.rightId, n.genCost, pos, base, yomi);
+        "%s\t%d\t%d\t%d\t%s\t%s\t%s\t%d".format(surface, n.leftId, n.rightId, n.genCost, pos, base, yomi, n.totalCost);
       }
       "BOS\n" + str.mkString("\n") + "\nEOS\n";
     }
