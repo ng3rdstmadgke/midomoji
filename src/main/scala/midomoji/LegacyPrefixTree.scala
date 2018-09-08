@@ -93,16 +93,18 @@ class LegacyPrefixTree[A]() {
     var base  = new Array[Int](100000);
     var check = new Array[Int](100000);
     var data  = new Array[List[A]](100000);
+    val bitCache = new BitCache(100000);
     val q = new Queue[(Int, LegacyPrefixTree[A])]();
     q.enqueue((1, this));
     while (!q.isEmpty) {
       val (currIdx, tree) = q.dequeue();
       val nodes     = tree.getNextNodes();
       val nodesSize = tree.getNextSize();
-      val (newBase, shouldExtend) = findBase(nodes, nodesSize, base, check, data);
+      val (newBase, shouldExtend) = findBase(nodes, nodesSize, base, check, data, bitCache);
       base(currIdx) = newBase;
       if (shouldExtend) {
         val size = Math.floor((newBase + 65535) * 1.25).toInt;
+        bitCache.extendsCache(size);
         val tmpBase  = new Array[Int](size);
         val tmpCheck = new Array[Int](size);
         val tmpData  = new Array[List[A]](size);
@@ -116,6 +118,7 @@ class LegacyPrefixTree[A]() {
       var i = 0;
       while (i < nodesSize) {
         val nextIdx = newBase + nodes(i).char;
+        bitCache.setIndex(nextIdx);
         base(nextIdx)  = 0;
         check(nextIdx) = currIdx;
         data(nextIdx)  = nodes(i).tree.getData;
@@ -137,10 +140,11 @@ class LegacyPrefixTree[A]() {
   }
 
   // base値を探す
-  def findBase(nodes: Array[TreeNode[A]], nodesSize: Int,
-               base: Array[Int], check: Array[Int], data: Array[List[A]]): (Int, Boolean) = {
+  def findBase(nodes: Array[TreeNode[A]], nodesSize: Int      , base: Array[Int],
+               check: Array[Int]        , data: Array[List[A]], bitCache: BitCache): (Int, Boolean) = {
     val arrLen = base.length;
-    var newBase = 1;
+    val firstNodeChar = nodes(0).char.toInt;
+    var newBase = bitCache.getEmptyIndex(1 + firstNodeChar) - firstNodeChar;
     var i = 0
       while(i < nodesSize) {
         val newIdx = newBase + nodes(i).char;
@@ -151,7 +155,7 @@ class LegacyPrefixTree[A]() {
           i += 1;
         } else {
           i = 0;
-          newBase += 1;
+          newBase = bitCache.getEmptyIndex(newBase + 1 + firstNodeChar) - firstNodeChar;
         }
       }
     (newBase, false);
