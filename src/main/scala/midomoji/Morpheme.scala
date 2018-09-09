@@ -1,4 +1,4 @@
-package com.github.ng3rdstmadgke.midomoji
+package com.github.ng3rdstmadgke.midomoji;
 
 /**
  * connId  : 12bit

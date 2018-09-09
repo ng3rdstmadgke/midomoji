@@ -25,12 +25,12 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
     while(i >= 0) {
       for (curr <- lattice(i)) {
         val nextIdx = curr.endIdx + 1;
-        val genCost = curr.genCost;
-        val rightId = curr.rightId;
+        val genCost = Morpheme.genCost(curr.morpheme);
+        val rightId = Morpheme.connId(curr.morpheme);
         var minCost = 1000000000;
         var minNode: LatticeNode = null;
         for (next <- lattice(nextIdx)) {
-          val totalCost = next.totalCost + genCost + sMatrix.getCost(rightId, next.leftId);
+          val totalCost = next.totalCost + genCost + sMatrix.getCost(rightId, Morpheme.connId(next.morpheme));
           if (totalCost < minCost) {
             minCost = totalCost;
             minNode = next;
@@ -66,8 +66,8 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
       if (nextIdx < size && currIdx == check(nextIdx)) {
         if (data(nextIdx) != null) {
           val endIdx         = seek + 1;
-          lattice(latticeIdx) = data(nextIdx).foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-            new LatticeNode(offset, endIdx, Morpheme.connId(token), Morpheme.connId(token), Morpheme.genCost(token), Morpheme.posId(token), Morpheme.id(token)) :: nodes;
+          lattice(latticeIdx) = data(nextIdx).foldLeft(lattice(latticeIdx)) { (nodes, morpheme) =>
+            new LatticeNode(offset, endIdx, morpheme) :: nodes;
           }
         }
         currIdx = nextIdx;
@@ -98,8 +98,8 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
       } else {
        if (treeNode.tree.getData != null) {
          val endIdx = seek + 1;
-         lattice(latticeIdx) = treeNode.tree.getData.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-           new LatticeNode(offset, endIdx, Morpheme.connId(token), Morpheme.connId(token), Morpheme.genCost(token), Morpheme.posId(token), Morpheme.id(token)) :: nodes;
+         lattice(latticeIdx) = treeNode.tree.getData.foldLeft(lattice(latticeIdx)) { (nodes, morpheme) =>
+           new LatticeNode(offset, endIdx, morpheme) :: nodes;
          }
        }
       }
@@ -120,8 +120,8 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
     // Indexは1スタート
     val lattice = Array.fill[List[LatticeNode]](len + 2)(Nil);
     // startIdx, endIdx, leftId, rightId, genCost, posId, id
-    lattice(0)       = new LatticeNode(-1 , 0      , 0, 0, 0, -1, -1) :: Nil;
-    lattice(len + 1) = new LatticeNode(len, len + 1, 0, 0, 0, -1, -1) :: Nil;
+    lattice(0)       = new LatticeNode(-1 , 0      , Morpheme(0, 0, -1, -1)) :: Nil;
+    lattice(len + 1) = new LatticeNode(len, len + 1, Morpheme(0, 0, -1, -1)) :: Nil;
     val groupTokens = (0 until charType.charTypeNum).toArray.map{ i => new GroupToken(-1, -1, charType.getTokenConfig(i)); }
     var i = 0;
     while (i < len) {
@@ -140,8 +140,8 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
           // 現状サロゲートペアの文字種はからなずDEFAULT
           val TokenConfig(charTypeId, charTypeName, forceUnigram, groupToken, ngram, tokens) = charType.getTokenConfig(0);
           if (forceUnigram || !prefixtree.exists(char)) {
-            lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-              new LatticeNode(i, endIdx, Morpheme.connId(token), Morpheme.connId(token), Morpheme.genCost(token), Morpheme.posId(token), Morpheme.id(token)) :: nodes;
+            lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, morpheme) =>
+              new LatticeNode(i, endIdx, morpheme) :: nodes;
             }
           }
           i += 2;
@@ -155,8 +155,8 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
           // ---- ---- unigramトークン生成 ---- ----
           if (forceUnigram || !prefixtree.exists(char)) {
             val endIdx = i + 1;
-            lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-              new LatticeNode(i, endIdx, Morpheme.connId(token), Morpheme.connId(token), Morpheme.genCost(token), Morpheme.posId(token), Morpheme.id(token)) :: nodes;
+            lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, morpheme) =>
+              new LatticeNode(i, endIdx, morpheme) :: nodes;
             }
           }
           // ---- ---- ngramトークン生成 ---- ----
@@ -168,9 +168,9 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
               val endIdx = nextIdx + 1;
               val surfaceLen = endIdx - i;
               if (charType.typeIs(nextChar, charTypeId) && !prefixtree.exists(text, i, endIdx)) {
-                lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-                  val optimizedGenCost = if (surfaceLen > 3) Morpheme.genCost(token) * (100 + 10 * surfaceLen) / 100 else Morpheme.genCost(token);
-                  new LatticeNode(i, endIdx, Morpheme.connId(token), Morpheme.connId(token), optimizedGenCost, Morpheme.posId(token), Morpheme.id(token)) :: nodes;
+                lattice(latticeIdx) = tokens.foldLeft(lattice(latticeIdx)) { (nodes, morpheme) =>
+                  val genCost = if (surfaceLen > 3) Morpheme.genCost(morpheme) * (100 + 10 * surfaceLen) / 100 else Morpheme.genCost(morpheme);
+                  new LatticeNode(i, endIdx, Morpheme.setGenCost(morpheme, genCost)) :: nodes;
                 }
                 false;
               } else {
@@ -190,9 +190,9 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
               } else if (gtoken.shouldCreateToken) {
                 // 直前の文字が異なる文字種でトークンを作る必要がある場合
                 val latticeIdx     = gtoken.startIdx + 1;
-                lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-                  val optimizedGenCost = if (gtoken.length > 3) Morpheme.genCost(token) * (100 + 10 * gtoken.length) / 100 else Morpheme.genCost(token);
-                  new LatticeNode(gtoken.startIdx, gtoken.endIdx, Morpheme.connId(token), Morpheme.connId(token), optimizedGenCost, Morpheme.posId(token), Morpheme.id(token)) :: nodes;
+                lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, morpheme) =>
+                  val genCost = if (gtoken.length > 3) Morpheme.genCost(morpheme) * (100 + 10 * gtoken.length) / 100 else Morpheme.genCost(morpheme);
+                  new LatticeNode(gtoken.startIdx, gtoken.endIdx, Morpheme.setGenCost(morpheme, genCost)) :: nodes;
                 }
                 gtoken.init(i);
               } else {
@@ -209,9 +209,9 @@ class Viterbi(private[this] val prefixtree: PrefixTree[Array[Long]],
     groupTokens.foreach { gtoken =>
       if (!gtoken.isEmpty && gtoken.shouldCreateToken) {
         val latticeIdx     = gtoken.startIdx + 1;
-        lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, token) =>
-          val optimizedGenCost = if (gtoken.length > 3) Morpheme.genCost(token) * (100 + 10 * gtoken.length) / 100 else Morpheme.genCost(token);
-          new LatticeNode(gtoken.startIdx, gtoken.endIdx, Morpheme.connId(token), Morpheme.connId(token), optimizedGenCost, Morpheme.posId(token), Morpheme.id(token)) :: nodes;
+        lattice(latticeIdx) = gtoken.tokenConfig.tokens.foldLeft(lattice(latticeIdx)) { (nodes, morpheme) =>
+          val genCost = if (gtoken.length > 3) Morpheme.genCost(morpheme) * (100 + 10 * gtoken.length) / 100 else Morpheme.genCost(morpheme);
+          new LatticeNode(gtoken.startIdx, gtoken.endIdx, Morpheme.setGenCost(morpheme, genCost)) :: nodes;
         }
       }
     }

@@ -17,14 +17,12 @@ import scala.collection.AbstractIterator;
  * @param totalCost EOSまでの最小コスト
  * @param nextNode  totalCostが最小となるノード
  */
-class LatticeNode(val startIdx: Int  , val endIdx: Int, val leftId: Int , val rightId: Int,
-                  val genCost: Int   , val posId: Int , val id: Int     , var totalCost: Int = 0,
-                  var nextNode: LatticeNode = null) extends Iterable[LatticeNode] {
+class LatticeNode(val startIdx: Int, val endIdx: Int, val morpheme: Long, var totalCost: Int = 0, var nextNode: LatticeNode = null) extends Iterable[LatticeNode] {
   override def iterator: Iterator[LatticeNode] = new LatticeNodeIterator(this.nextNode);
 
   override def toString(): String = {
-    val tpl = "LatticeNode(%d, %d, %d, %d, %d, %d, %d, %d)";
-    tpl.format(startIdx, endIdx, leftId, rightId, genCost, posId, id, totalCost);
+    val tpl = "LatticeNode(%d, %d, %d, %d, %d, %d, %d)";
+    tpl.format(startIdx, endIdx, Morpheme.connId(morpheme), Morpheme.genCost(morpheme), Morpheme.posId(morpheme), Morpheme.id(morpheme), totalCost);
   }
 }
 

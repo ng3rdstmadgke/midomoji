@@ -42,7 +42,7 @@ object Midomoji {
   }
 
   def simple(text: String, nodes: LatticeNode): String = {
-    val str = nodes.map(n => "%s\t%d\t%d\t%d".format(text.slice(n.startIdx, n.endIdx), n.leftId, n.rightId, n.genCost));
+    val str = nodes.map(n => "%s\t%d\t%d".format(text.slice(n.startIdx, n.endIdx), Morpheme.connId(n.morpheme), Morpheme.connId(n.morpheme)));
     "BOS\n" + str.mkString("\n") + "\nEOS\n";
   }
 
@@ -55,11 +55,12 @@ object Midomoji {
     val metaInfo = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
     (text: String, nodes: LatticeNode) => {
       val str = nodes.map { n =>
+        val morpheme = n.morpheme;
         val surface = text.slice(n.startIdx, n.endIdx);
-        val pos = posInfo.getPos(n.posId);
-        val base = metaInfo.getBaseForm(n.id, surface);
-        val yomi = metaInfo.getYomi(n.id, surface);
-        "%s\t%d\t%d\t%d\t%s\t%s\t%s\t%d".format(surface, n.leftId, n.rightId, n.genCost, pos, base, yomi, n.totalCost);
+        val pos = posInfo.getPos(Morpheme.posId(morpheme));
+        val base = metaInfo.getBaseForm(Morpheme.id(morpheme), surface);
+        val yomi = metaInfo.getYomi(Morpheme.id(morpheme), surface);
+        "%s\t%d\t%d\t%s\t%s\t%s\t%d".format(surface, Morpheme.connId(morpheme), Morpheme.genCost(morpheme), pos, base, yomi, n.totalCost);
       }
       "BOS\n" + str.mkString("\n") + "\nEOS\n";
     }
@@ -67,6 +68,6 @@ object Midomoji {
 
   def wakatiBase(): (String, LatticeNode) => String = {
     val metaInfo = Util.kryoDeserializeFromResource[MetaInfo](Util.metaInfoBin());
-    (text: String, nodes: LatticeNode) => nodes.map(n => metaInfo.getBaseForm(n.id, text.slice(n.startIdx, n.endIdx))).mkString(" ") + "\n";
+    (text: String, nodes: LatticeNode) => nodes.map(n => metaInfo.getBaseForm(Morpheme.id(n.morpheme), text.slice(n.startIdx, n.endIdx))).mkString(" ") + "\n";
   }
 }

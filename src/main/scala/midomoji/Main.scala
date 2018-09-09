@@ -180,7 +180,7 @@ object Main {
             println("[%d] : ".format(i));
             lattice(i).foreach { n =>
               val surface = text.slice(n.startIdx, n.endIdx);
-              val unk     = if (n.id == -1) " (未)" else "";
+              val unk     = if (Morpheme.id(n.morpheme) == -1) " (未)" else "";
               println("  " + n + "\t: "  + surface + unk);
             }
           }
