@@ -12,8 +12,8 @@ import scala.collection.mutable.HashMap;
  * @param ngram 何グラムまで生成するか(バイグラムなら2、トリグラムなら3を指定する)。
  * @param tokens 生成するトークンの雛形の配列。Array(leftId, rightId, genCost, posId, id)
  */
-case class TokenConfig(charTypeId: Int, charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Array[Int]]) extends Serializable {
-  def this() = this(0, "", false, false, 0, Array[Array[Int]]());
+case class TokenConfig(charTypeId: Int, charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Long]) extends Serializable {
+  def this() = this(0, "", false, false, 0, Array[Long]());
 }
 
 class CharType(private[this] val charTypeMap: Array[Array[Int]], private[this] val tokenConfigSet: Array[TokenConfig]) extends Serializable {
@@ -82,10 +82,10 @@ object CharType {
       };
     }
     // unk.def
-    val unkArr = Using[Source, Array[(String, Array[Int])]](Source.fromFile(unkPath)) { s =>
+    val unkArr = Using[Source, Array[(String, Long)]](Source.fromFile(unkPath)) { s =>
       s.getLines.toArray.map{ line =>
         val arr = line.split("\t").map(_.trim);
-        (arr(0), Array(arr(1).toInt, arr(2).toInt, arr(3).toInt, arr(4).toInt, -1));
+        (arr(0), Morpheme(arr(1).toLong, arr(3).toLong, arr(4).toLong, 0xFFFFFFL));
       };
     };
     // 文字種名とIDのマップ
@@ -93,7 +93,7 @@ object CharType {
     // 文字種の数
     val charTypeNum = charArr.length;
     // 同一文字種のトークンをまとめる
-    val tokens = Array.fill[List[Array[Int]]](charTypeNum)(Nil);
+    val tokens = Array.fill[List[Long]](charTypeNum)(Nil);
     unkArr.foreach { e =>
       val (charType, token) = e;
       charMap.get(charType) match {
