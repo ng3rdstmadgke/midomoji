@@ -6,13 +6,16 @@ package com.github.ng3rdstmadgke.midomoji
  * posId   : 10bit
  * id      : 24bit
  */
-object Morpheme {
-    def connId(n: Long): Int  = (n & 4095L).toInt;
-    def genCost(n: Long): Int = ((n >>> 12) & 65535L).toShort.toInt;
-    def posId(n: Long): Int   = ((n >>> 28) & 1023L).toInt;
-    def id(n: Long): Int      = ((n >>> 38) & 16777215L).toInt;
-    def apply(connId: Long, genCost: Long, posId: Long, id: Long): Long = {
-        connId | ((genCost & 65535L) << 12) | ((posId & 1023L) << 28) | ((id & 16777215L) << 38);
-    }
-}
 
+object Morpheme {
+  def connId(n: Long): Int  = (n & 0xFFFL).toInt;
+  def genCost(n: Long): Int = ((n >>> 12) & 0xFFFFL).toShort.toInt;
+  def posId(n: Long): Int   = ((n >>> 28) & 0x3FFL).toInt;
+  def id(n: Long): Int      = ((n >>> 38) & 0xFFFFFFL).toInt;
+  def setGenCost(n: Long, genCost: Int) = {
+    n & 0xFFFFFFFFF0000FFFL | ((genCost & 0xFFFFL) << 12);
+  }
+  def apply(connId: Int, genCost: Int, posId: Int, id: Int): Long = {
+    (0xFFFL & connId) | ((0xFFFFL & genCost) << 12) | ((0x3FFL & posId) << 28) | ((0xFFFFFFL & id) << 38);
+  }
+}

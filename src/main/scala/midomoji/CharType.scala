@@ -85,7 +85,7 @@ object CharType {
     val unkArr = Using[Source, Array[(String, Long)]](Source.fromFile(unkPath)) { s =>
       s.getLines.toArray.map{ line =>
         val arr = line.split("\t").map(_.trim);
-        (arr(0), Morpheme(arr(1).toLong, arr(3).toLong, arr(4).toLong, 0xFFFFFFL));
+        (arr(0), Morpheme(arr(1).toInt, arr(3).toInt, arr(4).toInt, 0xFFFFFF));
       };
     };
     // 文字種名とIDのマップ

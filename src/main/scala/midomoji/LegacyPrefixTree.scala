@@ -170,7 +170,7 @@ object LegacyPrefixTree {
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
         val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
-        dict.add(surface, Morpheme(left.toLong, genCost.toLong, posId.toLong, id.toLong));
+        dict.add(surface, Morpheme(left.toInt, genCost.toInt, posId.toInt, id.toInt));
       }
       dict;
     }
@@ -181,7 +181,7 @@ object LegacyPrefixTree {
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
         val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
-        val elem = Morpheme(left.toLong, genCost.toLong, posId.toLong, id.toLong);
+        val elem = Morpheme(left.toInt, genCost.toInt, posId.toInt, id.toInt);
         dict.find(surface) match {
           case None    => println(surface + " 遷移失敗");
           case Some(d) => {

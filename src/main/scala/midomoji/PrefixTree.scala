@@ -376,7 +376,7 @@ object PrefixTree {
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
         val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
-        val elem = Morpheme(left.toLong, genCost.toLong, posId.toLong, id.toLong);
+        val elem = Morpheme(left.toInt, genCost.toInt, posId.toInt, id.toInt);
         prefixree.find(surface) match {
           case None     => {
             println(surface + " : 遷移失敗");
