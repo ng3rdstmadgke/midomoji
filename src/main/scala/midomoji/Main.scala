@@ -135,7 +135,7 @@ object Main {
   def debug(): Unit = {
     var prefixtree = PrefixTree[Array[Long]](5);
     var matrix     = Matrix(1316, 1316);
-    var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0), HashMap[(Int, Int), Array[Int]]());
+    var charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
     var posInfo    = new PosInfo(Array[String]());
     var metaInfo   = new MetaInfo(Array[Array[String]]());
     def go(): Unit = {
@@ -144,7 +144,7 @@ object Main {
         case "init" :: xs => {
           prefixtree = PrefixTree[Array[Long]](5);
           matrix     = Matrix(1316, 1316);
-          charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0), HashMap[(Int, Int), Array[Int]]());
+          charType   = new CharType(new Array[Array[Int]](0), new Array[TokenConfig](0));
           posInfo    = new PosInfo(Array[String]());
           metaInfo   = new MetaInfo(Array[Array[String]]());
         }

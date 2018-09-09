@@ -3,8 +3,8 @@
 # CHAR_TYPE_NAME には char.def で定義した文字種を指定する
 #
 # [ format ]
-#   CODE_POINT	CHAR_TYPE_NAME                          コードポイントに対応する文字種を指定する。
-#   CODE_POINT_START-CODE_POINT_END	CHAR_TYPE_NAME      コードポイントの範囲に対応する文字種を指定する。
+#   CHAR_CODE	CHAR_TYPE_NAME                          文字コード(Char型)に対応する文字種を指定する。
+#   CHAR_CODE_START-CHAR_CODE_END	CHAR_TYPE_NAME      文字コード(Char型)の範囲に対応する文字種を指定する。
 #
 ##################################################################################
 0x0020	SPACE
