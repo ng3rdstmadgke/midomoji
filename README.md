@@ -18,7 +18,7 @@ tar xvzf ipadic.tar.gz
 ```
 midomojiをインストール
 ```
-bash build.sh ./mecab-ipadic-2.7.0-20070801
+make ipadic=./mecab-ipadic-2.7.0-20070801
 ```
 解析
 ```
