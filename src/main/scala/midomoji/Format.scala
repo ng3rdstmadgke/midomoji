@@ -1,37 +1,6 @@
 package com.github.ng3rdstmadgke.midomoji;
 
-import java.text.Normalizer;
-import java.io.{BufferedWriter, BufferedReader, OutputStreamWriter, InputStreamReader, OutputStream, InputStream, FileOutputStream, FileInputStream};
-import java.nio.charset.StandardCharsets;
-
-class Midomoji(private[this] val prefixtree: PrefixTree[Array[Long]],
-               private[this] val matrix: Matrix,
-               private[this] val charType: CharType,
-               private[this] val userPrefixtree: LegacyPrefixTree[Long]) {
-  private[this] val viterbi = new Viterbi(prefixtree, matrix, charType, userPrefixtree);
-
-  def analyze(text: String, format: String = ""): String = {
-    val normalized = Normalizer.normalize(text, Normalizer.Form.NFKC);
-    Midomoji.format(format)(normalized, viterbi.analyze(normalized));
-  }
-
-  def analyzeInput(is: InputStream, os: OutputStream, bs: Int = 8192)(nodeToString: (String, LatticeNode) => String): Unit = {
-    Using[BufferedReader, Unit](new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8), bs)) { br =>
-      Using[BufferedWriter, Unit](new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), bs)) { bw =>
-        val sViterbi = viterbi;
-        var line = br.readLine();
-        while (line != null) {
-          val normalized = Normalizer.normalize(line, Normalizer.Form.NFKC);
-          bw.write(nodeToString(normalized, sViterbi.analyze(normalized)));
-          line = br.readLine();
-        }
-        bw.flush();
-      }
-    }
-  }
-}
-
-object Midomoji {
+object Format {
   def format(fmt: String): (String, LatticeNode) => String = {
     fmt match {
       case "wakati"      => wakati;
