@@ -1,7 +1,7 @@
 package com.github.ng3rdstmadgke.midomoji
 
 import scala.io.Source;
-import scala.collection.mutable.Queue;
+import scala.collection.mutable.{Stack, Queue};
 import scala.reflect.ClassTag;
 
 class TreeNode[T](val char: Char, val tree: LegacyPrefixTree[T]) {
@@ -94,10 +94,10 @@ class LegacyPrefixTree[A]() {
     var check = new Array[Int](100000);
     var data  = new Array[List[A]](100000);
     val bitCache = new BitCache(100000);
-    val q = new Queue[(Int, LegacyPrefixTree[A])]();
-    q.enqueue((1, this));
-    while (!q.isEmpty) {
-      val (currIdx, tree) = q.dequeue();
+    val s = new Stack[(Int, LegacyPrefixTree[A])]();
+    s.push((1, this));
+    while (!s.isEmpty) {
+      val (currIdx, tree) = s.pop();
       val nodes     = tree.getNextNodes();
       val nodesSize = tree.getNextSize();
       val (newBase, shouldExtend) = findBase(nodes, nodesSize, base, check, data, bitCache);
@@ -123,7 +123,7 @@ class LegacyPrefixTree[A]() {
         check(nextIdx) = currIdx;
         data(nextIdx)  = nodes(i).tree.getData;
         if (nodes(i).tree.getNextSize > 0) {
-          q.enqueue((nextIdx, nodes(i).tree));
+          s.push((nextIdx, nodes(i).tree));
         }
         i += 1
       }
@@ -170,7 +170,7 @@ object LegacyPrefixTree {
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
         val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
-        dict.add(surface, Morpheme(left.toLong, genCost.toLong, posId.toLong, id.toLong));
+        dict.add(surface, Morpheme(left.toInt, genCost.toInt, posId.toInt, id.toInt));
       }
       dict;
     }
@@ -181,7 +181,7 @@ object LegacyPrefixTree {
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
         val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
-        val elem = Morpheme(left.toLong, genCost.toLong, posId.toLong, id.toLong);
+        val elem = Morpheme(left.toInt, genCost.toInt, posId.toInt, id.toInt);
         dict.find(surface) match {
           case None    => println(surface + " 遷移失敗");
           case Some(d) => {

@@ -12,14 +12,14 @@ import scala.collection.mutable.HashMap;
  * @param ngram 何グラムまで生成するか(バイグラムなら2、トリグラムなら3を指定する)。
  * @param tokens 生成するトークンの雛形の配列。Array(leftId, rightId, genCost, posId, id)
  */
-case class TokenConfig(charTypeId: Int, charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Array[Int]]) extends Serializable {
-  def this() = this(0, "", false, false, 0, Array[Array[Int]]());
+case class TokenConfig(charTypeId: Int, charTypeName: String, forceUnigram: Boolean, groupToken: Boolean, ngram: Int, tokens: Array[Long]) extends Serializable {
+  def this() = this(0, "", false, false, 0, Array[Long]());
 }
 
-class CharType(private[this] val charTypeMap: Array[Array[Int]], private[this] val tokenConfigSet: Array[TokenConfig], private[this] val codePointMap: HashMap[(Int, Int), Array[Int]]) extends Serializable {
+class CharType(private[this] val charTypeMap: Array[Array[Int]], private[this] val tokenConfigSet: Array[TokenConfig]) extends Serializable {
   val charTypeNum = tokenConfigSet.length;
 
-  def this() = this(Array[Array[Int]](), Array[TokenConfig](), HashMap[(Int, Int), Array[Int]]());
+  def this() = this(Array[Array[Int]](), Array[TokenConfig]());
 
   /**
    * charに対応する文字種IDとトークン生成設定を返す。
@@ -28,25 +28,6 @@ class CharType(private[this] val charTypeMap: Array[Array[Int]], private[this] v
    */
   def getTokenConfigs(char: Char): Array[TokenConfig] = {
     charTypeMap(char.toInt).map(charType => tokenConfigSet(charType));
-  }
-
-  def getTokenConfigs(codePoint: Int): Array[TokenConfig] = {
-    if (codePoint <= 65535) {
-      charTypeMap(codePoint).map(charType => tokenConfigSet(charType));
-    } else {
-      val tmp = new Array[TokenConfig](charTypeNum);
-      codePointMap.foreach { e =>
-        val (start, end) = e._1;
-        val charTypeArr  = e._2;
-        if (codePoint >= start && codePoint <= end) {
-          charTypeArr.foreach { charType =>
-            tmp(charType) = tokenConfigSet(charType);
-          }
-        }
-      }
-      val ret = tmp.filter(_ != null);
-      if (ret.length == 0) Array(tokenConfigSet(0)) else ret;
-    }
   }
 
   /**
@@ -93,18 +74,18 @@ object CharType {
       s.getLines.toArray.map { line =>
         val arr = line.split("\t").map(_.trim);
         val range = arr(0).split("-") match {
-          case Array(start)      => (Integer.decode(start).toInt, Integer.decode(start).toInt);
-          case Array(start, end) => (Integer.decode(start).toInt, Integer.decode(end).toInt);
+          case Array(start)      => (Integer.decode(start.trim).toInt, Integer.decode(start.trim).toInt);
+          case Array(start, end) => (Integer.decode(start.trim).toInt, Integer.decode(end.trim).toInt);
           case _                 => (0, -1);
         }
         (range, arr.toList.tail);
       };
     }
     // unk.def
-    val unkArr = Using[Source, Array[(String, Array[Int])]](Source.fromFile(unkPath)) { s =>
+    val unkArr = Using[Source, Array[(String, Long)]](Source.fromFile(unkPath)) { s =>
       s.getLines.toArray.map{ line =>
         val arr = line.split("\t").map(_.trim);
-        (arr(0), Array(arr(1).toInt, arr(2).toInt, arr(3).toInt, arr(4).toInt, -1));
+        (arr(0), Morpheme(arr(1).toInt, arr(3).toInt, arr(4).toInt, 0xFFFFFF));
       };
     };
     // 文字種名とIDのマップ
@@ -112,7 +93,7 @@ object CharType {
     // 文字種の数
     val charTypeNum = charArr.length;
     // 同一文字種のトークンをまとめる
-    val tokens = Array.fill[List[Array[Int]]](charTypeNum)(Nil);
+    val tokens = Array.fill[List[Long]](charTypeNum)(Nil);
     unkArr.foreach { e =>
       val (charType, token) = e;
       charMap.get(charType) match {
@@ -129,7 +110,6 @@ object CharType {
     // charTypeMapの生成
     val charMax = 65536;
     val charTypeMapTmp = Array.fill[List[Int]](charMax)(Nil);
-    val codePointMap   = new HashMap[(Int, Int), Array[Int]]();
     charTypeArr.foreach { e =>
       val (range, charTypes) = e;
       val charTypeList = charTypes.map { charType =>
@@ -138,7 +118,6 @@ object CharType {
           case None     => -1;
         }
       }.filter(_ > 0);
-      // 2バイトに収まる文字
       if (range._1 < charMax) {
         val start = range._1;
         val end   = if (range._2 < charMax) range._2 else charMax - 1 ;
@@ -150,12 +129,6 @@ object CharType {
           }
         }
       }
-      // 2バイトを超える文字
-      if (range._2 >= charMax) {
-        val cpStart = if (range._1 >= charMax) range._1 else charMax;
-        val cpEnd   = range._2;
-        codePointMap += ((cpStart, cpEnd) -> charTypeList.toArray);
-      }
     }
     val charTypeMap = charTypeMapTmp.map { e =>
       e match {
@@ -163,6 +136,6 @@ object CharType {
         case e   => e.toArray;
       }
     }
-    new CharType(charTypeMap, tokenConfigSet, codePointMap);
+    new CharType(charTypeMap, tokenConfigSet);
   }
 }

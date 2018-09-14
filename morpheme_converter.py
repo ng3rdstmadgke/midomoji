@@ -47,7 +47,7 @@ while True:
     out = processor(line.split("\t"))
     if out is None:
       sys.stderr.write("[Error] convert failed : {}\n".format(line))
-      continue
+      sys.exit(1)
     print_buffer.append(out)
     cnt += 1
     if cnt % 1000 == 0:
@@ -58,7 +58,7 @@ while True:
     break
   except Exception as e:
     sys.stderr.write("[Error] convert failed : {}\n".format(line))
-    print(e)
+    raise e
 
 if cnt > 0:
   print("\n".join(print_buffer))
