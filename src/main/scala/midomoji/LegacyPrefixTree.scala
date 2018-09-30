@@ -7,6 +7,10 @@ import scala.reflect.ClassTag;
 class TreeNode[T](val char: Char, val tree: LegacyPrefixTree[T]) {
   override def toString(): String = char.toString;
 }
+
+/**
+ * 素朴な実装のトライ木。ノードの探索は2分探索で行う。
+ */
 class LegacyPrefixTree[A]() {
   private[this] var nextNodes = new Array[TreeNode[A]](10);
   private[this] var nextSize = 0;
@@ -16,6 +20,12 @@ class LegacyPrefixTree[A]() {
   def getNextSize(): Int = nextSize;
   def getData(): List[A] = data;
 
+  /**
+   * ノードの追加
+   *
+   * @param key   トライ木のキー
+   * @param value 格納するデータ
+   */
   def add(key: String, value: A): Unit = _add(key, 0, value);
 
   private def _add(key: String, offset: Int, value: A): Unit = {
@@ -28,6 +38,11 @@ class LegacyPrefixTree[A]() {
     }
   }
 
+  /**
+   * ノードの取り出し
+   *
+   * @param key トライ木のキー
+   */
   def find(key: String): Option[List[A]] = _find(key, 0);
 
   private def _find(key: String, offset: Int): Option[List[A]] = {
@@ -43,6 +58,13 @@ class LegacyPrefixTree[A]() {
     }
   }
 
+  /**
+   * ノードの挿入。常にソートされた状態を保つように
+   * 挿入ソートを行っている.
+
+   *
+   * @param key トライ木のキー
+   */
   private def insert(char: Char): TreeNode[A] = {
     if ((nextSize + 1) >= nextNodes.length) extendsArray();
     var i = nextSize;
@@ -70,6 +92,11 @@ class LegacyPrefixTree[A]() {
     nextNodes = tmpNextNodes;
   }
 
+  /**
+   * 2分探索でkeyを探す
+   *
+   * @param key トライ木のキー
+   */
   def get(key: Char): TreeNode[A] = {
     def loop(s: Int, e: Int, key: Char, nodes: Array[TreeNode[A]]): TreeNode[A] = {
       if (s > e) {

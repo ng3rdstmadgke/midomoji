@@ -4,16 +4,12 @@ import scala.collection.Iterable;
 import scala.collection.AbstractIterator;
 
 /**
- * ラティス構造を構成するノード 
+ * ラティス構造を構成するノード
  *
  * @constructor ラティス構造のノードを作る
  * @param startIdx  文字列におけるトークンの始まりのインデックス。(包含)
  * @param endIdx    文字列におけるトークンの終わりのインデックス。(排他)
- * @param leftId    左文脈ID
- * @param rightId   右文脈ID
- * @param genCost   生起コスト
- * @param posId     品詞ID
- * @param id        メタ情報ID
+ * @param morpheme  形態素情報を格納したLong(連接ID:12bit, 生起コスト:16bit, 品詞ID:10bit, 形態素ID:24bit)
  * @param totalCost EOSまでの最小コスト
  * @param nextNode  totalCostが最小となるノード
  */
