@@ -83,6 +83,14 @@ object OptionParser {
           detail      : 表層文字列,左文脈ID,右文脈ID,生起コスト,品詞情報,原型,読み をタブ区切りで表示する
           wakati      : 表層文字列 を空白区切りで表示する
           wakati-base : 原型 を空白区切りで表示する
+        -o | --output
+          出力ファイル。指定していない場合は標準出力に出力される。
+        -u | --user-dict
+          ユーザー辞書ファイル。config/user_dict.tsvにサンプルがある。
+        -bs | --buffer-size
+          出力時のバッファサイズ(byte)。
+        -d | --debug
+          辞書の読み込みと形態素解析の実行にかかった時間を計測する。
 
     - build-dict <DICT_DIR>      : 形態素辞書を構築する
     - build-matrix <DICT_DIR>    : 連接コスト表を構築する
