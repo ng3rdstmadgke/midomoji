@@ -196,8 +196,8 @@ object LegacyPrefixTree {
       val dict = new LegacyPrefixTree[Long]();
       s.getLines.zipWithIndex.foreach { lineWithId =>
         val (line, id) = lineWithId;
-        val Array(surface, left, right, genCost, posId, _*) = line.split("\t");
-        dict.add(surface, Morpheme(left.toInt, genCost.toInt, posId.toInt, id.toInt));
+        val Array(surface, left, right, genCost, _*) = line.split("\t");
+        dict.add(surface, Morpheme(left.toInt, genCost.toInt, -1, -1));
       }
       dict;
     }
