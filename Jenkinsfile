@@ -7,9 +7,10 @@ pipeline {
 
   }
   stages {
-    stage('') {
+    stage('build') {
       steps {
-        sh 'ls -alF'
+        sh '''ls -alF
+sbt package'''
       }
     }
   }
